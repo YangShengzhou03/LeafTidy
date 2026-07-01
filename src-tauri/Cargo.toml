@@ -1,0 +1,29 @@
+[package]
+name = "leaf-tidy"
+version = "1.0.0"
+description = "轻羽归档 - 开源免费跨平台文件整理工具"
+authors = ["LeafTidy"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+kamadak-exif = "0.5"
+walkdir = "2"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+md-5 = "0.10"
+trash = "3"
+
+[package.metadata]
+tauri = {}
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

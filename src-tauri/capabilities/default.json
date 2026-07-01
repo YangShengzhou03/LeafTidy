@@ -1,0 +1,20 @@
+{
+  "identifier": "default",
+  "description": "Default capability set for LeafTidy",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-open",
+    "core:event:default",
+    "core:event:allow-listen",
+    "core:event:allow-emit",
+    "core:window:allow-start-dragging",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-close",
+    "core:window:allow-is-maximized",
+    "dialog:default",
+    "dialog:allow-open"
+  ]
+}
