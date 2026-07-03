@@ -38,12 +38,13 @@
 </template>
 
 <script setup lang="ts">
-import { inject, watch, ref, onMounted, nextTick, type Ref } from 'vue'
+import { inject, watch, ref, onMounted, onUnmounted, nextTick, type Ref } from 'vue'
 import { InfoFilled } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
-import type { DirectoryStats } from '@/types'
+import type { DirectoryStats, LayoutState } from '@/types'
 
 const dirStats = inject<Ref<DirectoryStats | null>>('dirStats')!
+const layout = inject<Ref<LayoutState>>('layout')!
 const chartContainer = ref<HTMLElement | null>(null)
 let chartInstance: echarts.ECharts | null = null
 
@@ -131,7 +132,22 @@ onMounted(() => {
       initChart()
     })
   }
+  window.addEventListener('resize', handleResize)
 })
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  if (chartInstance) {
+    chartInstance.dispose()
+    chartInstance = null
+  }
+})
+
+function handleResize() {
+  if (chartInstance) {
+    chartInstance.resize()
+  }
+}
 
 watch(
   () => dirStats.value,
@@ -143,6 +159,15 @@ watch(
     }
   },
   { deep: true }
+)
+
+watch(
+  () => layout.value.rightBarWidth,
+  () => {
+    nextTick(() => {
+      handleResize()
+    })
+  }
 )
 </script>
 

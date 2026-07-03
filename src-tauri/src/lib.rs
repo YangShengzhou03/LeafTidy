@@ -12,7 +12,6 @@ pub fn run() {
     let log_manager = log::LogManager::new(None);
     let _ = log_manager.clean_expired(30);
 
-    // 尝试初始化地理编码器
     init_geocode_data();
 
     tauri::Builder::default()
@@ -57,11 +56,8 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
-/// 初始化地理编码数据（异步加载）
 fn init_geocode_data() {
-    // 在后台线程中加载，避免阻塞 UI
     std::thread::spawn(|| {
-        // 获取可执行文件所在目录
         let exe_dir = match std::env::current_exe() {
             Ok(path) => match path.parent() {
                 Some(p) => p.to_path_buf(),
@@ -75,14 +71,13 @@ fn init_geocode_data() {
                 return;
             }
         };
-        
-        // 尝试多个可能的路径
+
         let possible_paths = [
-            exe_dir.join("geodata/CN.txt"),           // 生产模式: 可执行文件目录/geodata/CN.txt
-            exe_dir.parent().unwrap().join("src-tauri/geodata/CN.txt"), // 开发模式: 项目根/src-tauri/geodata/CN.txt
-            exe_dir.parent().unwrap().parent().unwrap().join("src-tauri/geodata/CN.txt"), // 开发模式深层
-            std::path::PathBuf::from("geodata/CN.txt"), // 当前工作目录 (src-tauri)
-            std::path::PathBuf::from("../geodata/CN.txt"), // 上级目录
+            exe_dir.join("geodata/CN.txt"),
+            exe_dir.parent().unwrap().join("src-tauri/geodata/CN.txt"),
+            exe_dir.parent().unwrap().parent().unwrap().join("src-tauri/geodata/CN.txt"),
+            std::path::PathBuf::from("geodata/CN.txt"),
+            std::path::PathBuf::from("../geodata/CN.txt"),
         ];
 
         for path in &possible_paths {

@@ -90,6 +90,7 @@ import type { FunctionPanel } from '@/types'
 
 const { layout, activePanel, workDirs, outputDir, dirStats, currentLogId } = useLayout()
 
+provide('layout', layout)
 provide('activePanel', activePanel)
 provide('workDirs', workDirs)
 provide('outputDir', outputDir)

@@ -1,16 +1,10 @@
-// 逆地理编码模块 - 基于 KDTree 的快速地理位置查询
-// 移植自 Java 版本 ReverseGeocode_China
-
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
 
-/// 行政区划代码映射
 struct AdminCodeMapping {
-    /// 省份代码 -> 省份名称 (ADM1)
     provinces: HashMap<String, String>,
-    /// 城市代码 -> 城市名称 (ADM2, 格式: admin1_admin2)
     cities: HashMap<String, String>,
 }
 
@@ -22,7 +16,6 @@ impl AdminCodeMapping {
         }
     }
 
-    /// 从 GeoNames 记录添加行政区划
     fn add_from_line(&mut self, line: &str) {
         let parts: Vec<&str> = line.split('\t').collect();
         if parts.len() < 12 {
@@ -55,22 +48,17 @@ impl AdminCodeMapping {
         }
     }
 
-    /// 获取省份名称
     fn get_province(&self, admin1: &str) -> Option<String> {
         self.provinces.get(admin1).cloned()
     }
 
-    /// 获取城市名称
     fn get_city(&self, admin1: &str, admin2: &str) -> Option<String> {
         let key = format!("{}_{}", admin1, admin2);
         self.cities.get(&key).cloned()
     }
 }
 
-/// 从 alternatenames 字段提取中文名称
-/// 优先选择包含行政区划后缀（区、县、市、盟、旗）的名称
 fn extract_chinese_name(all_names: &str) -> String {
-    // alternatenames 格式: "Beijing,Peking,北京,北京市"
     let chinese_names: Vec<String> = all_names
         .split(',')
         .filter(|name| name.chars().any(|c| c >= '\u{4e00}' && c <= '\u{9fff}'))
@@ -81,7 +69,6 @@ fn extract_chinese_name(all_names: &str) -> String {
         return String::new();
     }
     
-    // 优先选择包含行政区划后缀的名称
     for name in &chinese_names {
         if name.ends_with("区") || name.ends_with("县") || name.ends_with("市") 
            || name.ends_with("盟") || name.ends_with("旗") || name.ends_with("自治县")
@@ -90,40 +77,27 @@ fn extract_chinese_name(all_names: &str) -> String {
         }
     }
     
-    // 如果没有行政区划后缀，选择最短的中文名称（通常是最简洁的）
     chinese_names
         .into_iter()
         .min_by_key(|name| name.len())
         .unwrap_or_default()
 }
 
-/// 地理位置名称
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct GeoName {
-    /// 地名
     pub name: String,
-    /// 中文名称
     pub chinese_name: String,
-    /// 纬度
     pub latitude: f64,
-    /// 经度
     pub longitude: f64,
-    /// 3D 坐标点 (用于球面距离计算)
     point: [f64; 3],
-    /// 国家代码
     pub country: String,
-    /// 省份代码 (admin1)
     admin1: String,
-    /// 城市代码 (admin2)
     admin2: String,
-    /// 区县代码 (admin3)
     admin3: String,
 }
 
 impl GeoName {
-    /// 从 GeoNames 格式的文本行解析
-    /// 格式: geonameid\tname\tasciiname\talternatenames\tlatitude\tlongitude\tfeature class\tfeature code\tcountry code\tcc2\tadmin1\tadmin2\tadmin3\t...
     pub fn from_line(line: &str) -> Option<Self> {
         let parts: Vec<&str> = line.split('\t').collect();
         if parts.len() < 13 {
@@ -155,7 +129,6 @@ impl GeoName {
         })
     }
 
-    /// 创建一个用于搜索的 GeoName (仅包含坐标)
     pub fn from_lat_lon(latitude: f64, longitude: f64) -> Self {
         let point = lat_lon_to_3d(latitude, longitude);
         GeoName {
@@ -171,7 +144,6 @@ impl GeoName {
         }
     }
 
-    /// 计算与另一个点的平方距离 (3D 欧几里得距离)
     fn squared_distance(&self, other: &GeoName) -> f64 {
         let dx = self.point[0] - other.point[0];
         let dy = self.point[1] - other.point[1];
@@ -179,14 +151,12 @@ impl GeoName {
         dx * dx + dy * dy + dz * dz
     }
 
-    /// 计算在指定轴上的平方距离
     fn axis_squared_distance(&self, other: &GeoName, axis: usize) -> f64 {
         let distance = self.point[axis] - other.point[axis];
         distance * distance
     }
 }
 
-/// 将经纬度转换为 3D 单位球面上的点
 fn lat_lon_to_3d(lat: f64, lon: f64) -> [f64; 3] {
     let lat_rad = lat.to_radians();
     let lon_rad = lon.to_radians();
@@ -198,20 +168,17 @@ fn lat_lon_to_3d(lat: f64, lon: f64) -> [f64; 3] {
     ]
 }
 
-/// KD 树节点
 struct KDNode {
     left: Option<Box<KDNode>>,
     right: Option<Box<KDNode>>,
     location: GeoName,
 }
 
-/// KD 树 - 用于快速最近邻搜索
 pub struct KDTree {
     root: Option<Box<KDNode>>,
 }
 
 impl KDTree {
-    /// 从地理位置列表构建 KD 树
     pub fn new(items: Vec<GeoName>) -> Self {
         if items.is_empty() {
             return KDTree { root: None };
@@ -222,7 +189,6 @@ impl KDTree {
         }
     }
 
-    /// 递归构建 KD 树
     fn build_tree(items: &mut [GeoName], depth: usize) -> Box<KDNode> {
         if items.is_empty() {
             panic!("build_tree called with empty items");
@@ -265,18 +231,15 @@ impl KDTree {
         })
     }
 
-    /// 查找最近的地理位置
     pub fn find_nearest(&self, search: &GeoName) -> Option<&GeoName> {
         self.root
             .as_ref()
             .map(|root| &Self::find_nearest_node(root, search, 0).location)
     }
 
-    /// 递归查找最近节点
     fn find_nearest_node<'a>(node: &'a KDNode, search: &GeoName, depth: usize) -> &'a KDNode {
         let axis = depth % 3;
 
-        // 决定搜索方向
         let go_left = search.point[axis] < node.location.point[axis];
         let (next, other) = if go_left {
             (&node.left, &node.right)
@@ -284,18 +247,15 @@ impl KDTree {
             (&node.right, &node.left)
         };
 
-        // 递归到叶子节点
         let mut best = match next {
             Some(next_node) => Self::find_nearest_node(next_node, search, depth + 1),
             None => node,
         };
 
-        // 检查当前节点是否更近
         if node.location.squared_distance(search) < best.location.squared_distance(search) {
             best = node;
         }
 
-        // 检查是否需要搜索另一侧
         if let Some(other_node) = other {
             let axis_distance = node.location.axis_squared_distance(search, axis);
             if axis_distance < best.location.squared_distance(search) {
@@ -312,17 +272,13 @@ impl KDTree {
     }
 }
 
-/// 逆地理编码器
 pub struct ReverseGeoCode {
-    /// 人口聚集地 KDTree（村庄、城镇等）
     kd_tree_places: KDTree,
-    /// 行政区划 KDTree（ADM1/ADM2/ADM3）
     kd_tree_admin: KDTree,
     admin_mapping: AdminCodeMapping,
 }
 
 impl ReverseGeoCode {
-    /// 从文本数据创建逆地理编码器
     pub fn from_reader<R: Read>(reader: R) -> Result<Self, String> {
         let buf_reader = BufReader::new(reader);
         let mut places = Vec::new();
@@ -367,11 +323,9 @@ impl ReverseGeoCode {
         })
     }
 
-    /// 查找最近的地理位置并返回行政区划信息
     pub fn reverse_geocode(&self, latitude: f64, longitude: f64) -> super::models::GpsLocation {
         let search = GeoName::from_lat_lon(latitude, longitude);
         
-        // 使用 GeoName 的名称字段获取名称（优先中文）
         let get_display_name = |geo: &GeoName| {
             if !geo.chinese_name.is_empty() {
                 geo.chinese_name.clone()
@@ -380,7 +334,6 @@ impl ReverseGeoCode {
             }
         };
         
-        // 从行政区划 KDTree 查找（ADM1/ADM2/ADM3）
         let (province, city, district) = if let Some(admin_unit) = self.kd_tree_admin.find_nearest(&search) {
             let province = self.admin_mapping.get_province(&admin_unit.admin1)
                 .or_else(|| Some("未知省份".to_string()));
@@ -399,9 +352,14 @@ impl ReverseGeoCode {
             (Some("未知省份".to_string()), Some("未知城市".to_string()), Some("未知区县".to_string()))
         };
         
-        // 从地点 KDTree 查找最近的地点（村庄、城镇等）
         let place = if let Some(place_unit) = self.kd_tree_places.find_nearest(&search) {
-            Some(get_display_name(place_unit))
+            let place_name = get_display_name(place_unit);
+            let district_name = district.as_deref().unwrap_or("");
+            if !place_name.is_empty() && place_name != district_name {
+                Some(place_name)
+            } else {
+                None
+            }
         } else {
             None
         };
@@ -417,13 +375,10 @@ impl ReverseGeoCode {
     }
 }
 
-/// 全局逆地理编码器实例
 static GEOCODER: OnceLock<ReverseGeoCode> = OnceLock::new();
 
-/// 全局加载状态标记
 static GEOCODER_READY: AtomicBool = AtomicBool::new(false);
 
-/// 初始化逆地理编码器
 pub fn init_geocoder(data: &str) -> Result<(), String> {
     let geocoder = ReverseGeoCode::from_reader(data.as_bytes())?;
     let _ = GEOCODER.set(geocoder);
@@ -431,19 +386,15 @@ pub fn init_geocoder(data: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// 检查地理编码器是否已加载完成
 pub fn is_geocoder_ready() -> bool {
     GEOCODER_READY.load(Ordering::SeqCst)
 }
 
-/// 获取逆地理编码器
 pub fn get_geocoder() -> Option<&'static ReverseGeoCode> {
     GEOCODER.get()
 }
 
-/// 逆地理编码查询
 pub fn reverse_geocode(lat: f64, lng: f64) -> Result<super::models::GpsLocation, String> {
-    // 必须使用 KDTree 逆地理编码
     match get_geocoder() {
         Some(geocoder) => Ok(geocoder.reverse_geocode(lat, lng)),
         None => Err("地理编码器未初始化，请确保 geodata/CN.txt 文件存在".to_string()),

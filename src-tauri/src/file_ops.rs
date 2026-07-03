@@ -407,10 +407,7 @@ pub fn organize_files(
             let file_path = entry.path();
             let file_path_str = file_path.to_string_lossy().to_string();
 
-            // 记录开始时间
             let start_time = std::time::Instant::now();
-
-            // 收集元数据信息
             let file_metadata = collect_file_metadata(file_path, rule);
 
             let target_subpath = match build_target_path(file_path, target_path, rule) {
@@ -480,13 +477,11 @@ pub fn organize_files(
     Ok(results)
 }
 
-/// 收集文件元数据信息用于日志记录
 fn collect_file_metadata(file_path: &Path, _rule: &OrganizeRule) -> Option<OrganizeMetadata> {
     let metadata = fs::metadata(file_path).ok()?;
     let path_str = file_path.to_string_lossy().to_string();
     let is_media_file = metadata::is_image_file(&path_str) || metadata::is_video_file(&path_str);
     
-    // 获取时间信息
     let modified = metadata.modified().ok().and_then(|t| {
         t.duration_since(std::time::UNIX_EPOCH).ok().map(|d| {
             let secs = d.as_secs();
@@ -505,7 +500,6 @@ fn collect_file_metadata(file_path: &Path, _rule: &OrganizeRule) -> Option<Organ
         })
     });
     
-    // 获取EXIF信息（如果是媒体文件）
     let exif_info = if is_media_file {
         metadata::read_exif(&path_str).ok()
     } else {
@@ -514,14 +508,12 @@ fn collect_file_metadata(file_path: &Path, _rule: &OrganizeRule) -> Option<Organ
     
     let taken = exif_info.as_ref().and_then(|e| e.date_taken.clone());
     
-    // 获取GPS信息（如果是媒体文件）
     let gps_location = if is_media_file {
         get_gps_location(file_path).ok().flatten()
     } else {
         None
     };
     
-    // 获取文件格式
     let format = file_path.extension()
         .map(|e| e.to_string_lossy().to_lowercase());
     
@@ -557,14 +549,12 @@ fn build_target_path(
     let path_str = source_path.to_string_lossy().to_string();
     let is_media_file = metadata::is_image_file(&path_str) || metadata::is_video_file(&path_str);
 
-    // 预先获取GPS信息（如果需要）
     let gps_location = if rule.tags.iter().any(|tag| tag == "province" || tag == "city" || tag == "district" || tag == "place") {
         get_gps_location(source_path)?
     } else {
         None
     };
 
-    // 预先获取EXIF信息（如果需要）
     let exif_info = if rule.tags.iter().any(|tag| tag == "make" || tag == "model") {
         if is_media_file {
             metadata::read_exif(&path_str).ok()
@@ -585,7 +575,6 @@ fn build_target_path(
             "day" => get_day_from_time(&metadata, &rule.time_source, source_path)?,
             "date" => get_full_date_from_time(&metadata, &rule.time_source, source_path)?,
             "province" => {
-                // 非图片/视频文件跳过省份层级
                 if !is_media_file {
                     continue;
                 }
@@ -602,7 +591,6 @@ fn build_target_path(
                 }
             }
             "city" => {
-                // 非图片/视频文件跳过城市层级
                 if !is_media_file {
                     continue;
                 }
@@ -619,7 +607,6 @@ fn build_target_path(
                 }
             }
             "district" => {
-                // 非图片/视频文件跳过区县层级
                 if !is_media_file {
                     continue;
                 }
@@ -636,7 +623,6 @@ fn build_target_path(
                 }
             }
             "place" => {
-                // 非图片/视频文件跳过地点层级
                 if !is_media_file {
                     continue;
                 }
@@ -653,7 +639,6 @@ fn build_target_path(
                 }
             }
             "make" => {
-                // 非图片/视频文件跳过相机品牌层级
                 if !is_media_file {
                     continue;
                 }
@@ -670,7 +655,6 @@ fn build_target_path(
                 }
             }
             "model" => {
-                // 非图片/视频文件跳过相机型号层级
                 if !is_media_file {
                     continue;
                 }
@@ -809,7 +793,6 @@ fn get_time_string(
             })
             .ok_or("无法获取创建时间".to_string()),
         "taken" => {
-            // 非图片/视频文件自动回退到修改时间
             if !is_media_file {
                 return metadata
                     .modified()
@@ -823,7 +806,6 @@ fn get_time_string(
                     })
                     .ok_or("无法获取修改时间".to_string());
             }
-            // 图片/视频文件尝试获取拍摄日期，失败则回退到修改时间
             metadata::read_exif(&path_str)
                 .ok()
                 .and_then(|exif| exif.date_taken)
@@ -1027,7 +1009,6 @@ pub fn batch_rename(
     Ok(results)
 }
 
-/// 解决文件名冲突，自动添加序号
 fn resolve_duplicate_filename(target_dir: &Path, base_name: &str) -> (String, PathBuf) {
     let target_path = target_dir.join(base_name);
     
@@ -1035,7 +1016,6 @@ fn resolve_duplicate_filename(target_dir: &Path, base_name: &str) -> (String, Pa
         return (base_name.to_string(), target_path);
     }
     
-    // 文件已存在，添加序号
     let name_without_ext = Path::new(base_name)
         .file_stem()
         .map(|n| n.to_string_lossy().to_string())
@@ -1053,7 +1033,6 @@ fn resolve_duplicate_filename(target_dir: &Path, base_name: &str) -> (String, Pa
         }
     }
     
-    // 如果序号超过1000，使用时间戳
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
@@ -1083,11 +1062,8 @@ fn build_rename(
     }
 
     let result = parts.join("");
-
-    // 清理文件名中的非法字符
     let sanitized = sanitize_filename(&result);
 
-    // 如果所有标签都返回空值，使用原文件名作为基础
     if sanitized.is_empty() {
         sanitize_filename(original_name)
     } else {
@@ -1121,7 +1097,6 @@ fn get_tag_value(
             .map(|e| e.to_string_lossy().to_string())
             .unwrap_or_default(),
         "index" => format!("{:03}", index),
-        // 非媒体文件跳过GPS和相机相关标签
         "province" => {
             if is_media_file {
                 let province = get_province(file_path).unwrap_or_default();
@@ -1435,7 +1410,6 @@ pub fn move_files_batch(
 
         let dest_path = target_path.join(&file_name);
 
-        // 处理同名文件冲突
         let final_dest = if dest_path.exists() {
             let mut counter = 1;
             let stem = source_path

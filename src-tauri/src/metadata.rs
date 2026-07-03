@@ -13,7 +13,10 @@ pub fn read_exif(path: &str) -> Result<ExifInfo, String> {
 
     let get_str = |tag: exif::Tag| -> Option<String> {
         exif.get_field(tag, exif::In::PRIMARY)
-            .map(|f| f.value.display_as(f.tag).to_string())
+            .map(|f| {
+                let s = f.value.display_as(f.tag).to_string();
+                s.trim_matches('"').trim().to_string()
+            })
     };
 
     let get_u32 = |tag: exif::Tag| -> Option<u32> {
@@ -106,12 +109,10 @@ fn parse_gps_altitude(exif: &exif::Exif) -> Option<f64> {
     }
 }
 
-/// 逆地理编码 - 使用 geocode 模块实现
 pub fn reverse_geocode(lat: f64, lng: f64) -> Result<GpsLocation, String> {
     crate::geocode::reverse_geocode(lat, lng)
 }
 
-/// 初始化地理编码数据
 pub fn init_geocode_data(data: &str) -> Result<(), String> {
     crate::geocode::init_geocoder(data)
 }

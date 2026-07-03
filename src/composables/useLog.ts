@@ -14,28 +14,22 @@ export interface FileResult {
   new_name?: string
   success: boolean
   error?: string
-  // 元数据信息
   metadata?: FileMetadata
-  // 处理耗时（毫秒）
   process_time_ms?: number
 }
 
 export interface FileMetadata {
-  // 时间信息
   modified?: string
   created?: string
   taken?: string
-  // GPS信息
   gps_latitude?: number
   gps_longitude?: number
   gps_province?: string
   gps_city?: string
   gps_district?: string
   gps_place?: string
-  // EXIF信息
   camera_make?: string
   camera_model?: string
-  // 文件信息
   size?: number
   format?: string
 }
@@ -56,9 +50,6 @@ export interface RenameLogOptions {
 }
 
 export function useLog() {
-  /**
-   * 写入单条日志
-   */
   async function writeLog(params: LogParams): Promise<void> {
     try {
       await invoke('write_log', {
@@ -73,9 +64,6 @@ export function useLog() {
     }
   }
 
-  /**
-   * 格式化时间戳
-   */
   function formatTimestamp(): string {
     const now = new Date()
     return now.toLocaleString('zh-CN', {
@@ -89,9 +77,6 @@ export function useLog() {
     }) + '.' + now.getMilliseconds().toString().padStart(3, '0')
   }
 
-  /**
-   * 格式化用户设置参数
-   */
   function formatSettings(options: OrganizeLogOptions | RenameLogOptions, operationType: string): string {
     const lines: string[] = []
     lines.push('用户设置参数：')
@@ -112,6 +97,7 @@ export function useLog() {
         province: '省份',
         city: '城市',
         district: '区县',
+        place: '地点',
         make: '相机品牌',
         model: '相机型号',
         ext: '扩展名',
@@ -138,13 +124,9 @@ export function useLog() {
     return lines.join('\n')
   }
 
-  /**
-   * 格式化文件元数据
-   */
   function formatMetadata(meta: FileMetadata | undefined, processTimeMs?: number): string {
     const parts: string[] = []
     
-    // 处理耗时（放在最前面）
     if (processTimeMs !== undefined) {
       if (processTimeMs < 1000) {
         parts.push(`耗时=${processTimeMs}ms`)
@@ -154,13 +136,10 @@ export function useLog() {
     }
     
     if (!meta) return parts.length > 0 ? ` [${parts.join(', ')}]` : ''
-    
-    // 时间信息
     if (meta.modified) parts.push(`修改时间=${meta.modified}`)
     if (meta.created) parts.push(`创建时间=${meta.created}`)
     if (meta.taken) parts.push(`拍摄日期=${meta.taken}`)
     
-    // GPS信息
     if (meta.gps_latitude && meta.gps_longitude) {
       parts.push(`GPS坐标=${meta.gps_latitude.toFixed(6)},${meta.gps_longitude.toFixed(6)}`)
       if (meta.gps_province) parts.push(`省份=${meta.gps_province}`)
@@ -168,27 +147,18 @@ export function useLog() {
       if (meta.gps_district) parts.push(`区县=${meta.gps_district}`)
       if (meta.gps_place) parts.push(`地点=${meta.gps_place}`)
     }
-    
-    // EXIF信息
     if (meta.camera_make) parts.push(`相机品牌=${meta.camera_make}`)
     if (meta.camera_model) parts.push(`相机型号=${meta.camera_model}`)
-    
-    // 文件信息
     if (meta.size) parts.push(`文件大小=${meta.size}字节`)
     if (meta.format) parts.push(`文件格式=${meta.format}`)
     
     return parts.length > 0 ? ` [${parts.join(', ')}]` : ''
   }
 
-  /**
-   * 格式化文件列表为文本格式
-   */
   function formatFileList(results: FileResult[], operationType: string, targetDir?: string): string {
     const lines: string[] = []
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    // 计算总耗时
     const totalTimeMs = results.reduce((sum, r) => sum + (r.process_time_ms || 0), 0)
     
     lines.push(`任务执行结果统计：`)
@@ -214,7 +184,6 @@ export function useLog() {
       } else if (operationType === 'duplicate_clean' || operationType === 'cleanup') {
         lines.push(`[${status}] ${r.source_path}${metaInfo}`)
       } else {
-        // 对于文件整理，显示相对路径而不是绝对路径
         const displayPath = r.target_path && targetDir 
           ? getRelativePath(r.target_path, targetDir) 
           : (r.target_path || '未知')
@@ -228,36 +197,24 @@ export function useLog() {
     return lines.join('\n')
   }
 
-  /**
-   * 获取相对路径
-   */
   function getRelativePath(fullPath: string, basePath: string): string {
-    // 标准化路径分隔符
     const normalizedFull = fullPath.replace(/\\/g, '/')
     const normalizedBase = basePath.replace(/\\/g, '/')
     
-    // 确保基础路径以 / 结尾
     const baseWithSlash = normalizedBase.endsWith('/') ? normalizedBase : normalizedBase + '/'
     
-    // 如果完整路径以基础路径开头，返回相对路径
     if (normalizedFull.startsWith(baseWithSlash)) {
       return normalizedFull.substring(baseWithSlash.length)
     }
     
-    // 如果完整路径以基础路径开头（不带斜杠）
     if (normalizedFull.startsWith(normalizedBase)) {
       const remaining = normalizedFull.substring(normalizedBase.length)
-      // 去掉开头的斜杠
       return remaining.startsWith('/') ? remaining.substring(1) : remaining
     }
     
-    // 否则返回完整路径
     return fullPath
   }
 
-  /**
-   * 写入文件整理日志 - 一次任务一条
-   */
   async function logOrganizeResults(results: FileResult[], options: OrganizeLogOptions): Promise<void> {
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
@@ -284,9 +241,6 @@ export function useLog() {
     })
   }
 
-  /**
-   * 写入批量重命名日志 - 一次任务一条
-   */
   async function logRenameResults(results: FileResult[], options: RenameLogOptions): Promise<void> {
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
@@ -311,9 +265,6 @@ export function useLog() {
     })
   }
 
-  /**
-   * 写入重复文件清理日志 - 一次任务一条
-   */
   async function logDuplicateCleanResults(results: FileResult[]): Promise<void> {
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
@@ -332,9 +283,6 @@ export function useLog() {
     })
   }
 
-  /**
-   * 写入附属文件清理日志 - 一次任务一条
-   */
   async function logCleanupResults(results: FileResult[]): Promise<void> {
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
@@ -353,9 +301,6 @@ export function useLog() {
     })
   }
 
-  /**
-   * 提取公共目录路径
-   */
   function extractCommonDir(paths: string[]): string | null {
     if (paths.length === 0) return null
     if (paths.length === 1) {
@@ -363,9 +308,8 @@ export function useLog() {
       return parts.slice(0, -1).join('/')
     }
     
-    // 找到所有路径的共同前缀
     const firstParts = paths[0].split(/[/\\]/)
-    let commonLength = firstParts.length - 1 // 去掉文件名
+    let commonLength = firstParts.length - 1
     
     for (let i = 1; i < paths.length; i++) {
       const parts = paths[i].split(/[/\\]/)

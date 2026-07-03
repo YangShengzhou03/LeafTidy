@@ -15,18 +15,12 @@ export function useFileOps() {
     return invoke<DirectoryStats>('get_directory_stats', { paths })
   }
 
-  /**
-   * 从路径中提取文件名
-   */
   const getFileName = (path: string): string => {
     if (!path) return ''
     const parts = path.split(/[/\\]/)
     return parts[parts.length - 1] || path
   }
 
-  /**
-   * 格式化文件大小
-   */
   const formatSize = (size: number): string => {
     if (size < 1024) return `${size} B`
     if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`
@@ -34,9 +28,6 @@ export function useFileOps() {
     return `${(size / 1024 / 1024 / 1024).toFixed(2)} GB`
   }
 
-  /**
-   * 在资源管理器中打开文件
-   */
   const openFile = async (path: string): Promise<void> => {
     if (!path) return
     try {
@@ -46,9 +37,6 @@ export function useFileOps() {
     }
   }
 
-  /**
-   * 获取相对路径（相对于输出目录）
-   */
   const getRelativePath = (path: string, basePath: string): string => {
     if (!path || !basePath) return path
     const normalizedPath = path.replace(/\\/g, '/')
