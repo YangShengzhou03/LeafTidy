@@ -1,9 +1,10 @@
 [package]
 name = "leaf-tidy"
 version = "1.0.0"
-description = "轻羽归档 - 开源免费跨平台文件整理工具"
-authors = ["LeafTidy"]
+description = "一款安静的文件整理工具"
+authors = ["Yangshengzhou"]
 edition = "2021"
+license = "MIT"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
