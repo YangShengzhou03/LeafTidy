@@ -1,0 +1,39 @@
+{
+  "name": "leaf-tidy",
+  "version": "1.0.0",
+  "description": "轻羽归档 - 开源免费跨平台文件整理工具",
+  "author": "Yangshengzhou",
+  "homepage": "./",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "vue-cli-service build",
+    "build:tauri": "tauri build",
+    "server": "vue-cli-service serve",
+    "lint": "vue-cli-service lint",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.1.0",
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
+    "@tauri-apps/plugin-shell": "^2.0.0",
+    "core-js": "^3.49.0",
+    "echarts": "^6.1.0",
+    "element-plus": "^2.14.0",
+    "vue": "^3.5.34"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "@typescript-eslint/parser": "^4.33.0",
+    "@vue/cli-plugin-babel": "~5.0.0",
+    "@vue/cli-plugin-eslint": "~5.0.0",
+    "@vue/cli-service": "5.0.9",
+    "@vue/compiler-sfc": "^3.5.34",
+    "eslint": "^7.32.0",
+    "eslint-plugin-vue": "^8.7.1",
+    "ts-loader": "^9.6.0",
+    "typescript": "~4.9.0",
+    "unplugin-auto-import": "^21.0.0",
+    "unplugin-vue-components": "^32.1.0"
+  }
+}
