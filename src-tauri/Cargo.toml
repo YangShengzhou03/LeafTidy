@@ -1,0 +1,39 @@
+[package]
+name = "leafnova"
+version = "0.1.0"
+edition = "2021"
+default-run = "leafnova-tauri"
+
+[lib]
+name = "leafnova"
+path = "src/lib.rs"
+
+[[bin]]
+name = "leafnova-tauri"
+path = "src/tauri_main.rs"
+
+[dependencies]
+tauri = { version = "2.0", features = ["devtools"] }
+tauri-plugin-shell = "2.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+windows = { version = "0.58", features = [
+    "Win32_UI_Accessibility",
+    "Win32_Foundation",
+    "Win32_System_Com",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Threading",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_System_DataExchange",
+    "Win32_System_Memory",
+    "Win32_Graphics_Gdi",
+] }
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[features]
+cli = []
