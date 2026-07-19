@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/pages/Home.vue'
 import AutoMessage from '@/pages/AutoMessage.vue'
 import Settings from '@/pages/Settings.vue'
+import DataAnalysis from '@/pages/DataAnalysis.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -13,6 +14,10 @@ const router = createRouter({
     {
       path: '/auto-message',
       component: AutoMessage
+    },
+    {
+      path: '/data-analysis',
+      component: DataAnalysis
     },
     {
       path: '/settings',

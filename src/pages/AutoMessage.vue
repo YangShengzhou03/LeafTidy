@@ -1,118 +1,92 @@
 <template>
-  <div>
-    <el-card style="margin-bottom: 20px;">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div style="display: flex; gap: 12px;">
-          <el-input v-model="searchKeyword" placeholder="搜索任务" style="width: 200px;" clearable>
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
+  <div class="auto-message-page">
+    <div class="page-header">
+      <h1 class="page-title">自动消息</h1>
+      <p class="page-subtitle">管理定时发送和循环发送的任务</p>
+    </div>
 
-          <el-select v-model="filterType" placeholder="任务类型" style="width: 120px;" clearable>
-            <el-option label="定时任务" value="定时" />
-            <el-option label="循环任务" value="间隔" />
-          </el-select>
+    <div class="divider"></div>
 
-          <el-select v-model="filterStatus" placeholder="任务状态" style="width: 120px;" clearable>
-            <el-option label="已启用" :value="true" />
-            <el-option label="已禁用" :value="false" />
-          </el-select>
-        </div>
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <el-input v-model="searchKeyword" placeholder="搜索任务" clearable>
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
 
-        <div style="display: flex; gap: 12px;">
-          <el-button type="primary" @click="handleCreateTask">
-            <el-icon style="margin-right: 4px;"><Plus /></el-icon>
-            新建任务
-          </el-button>
+        <el-select v-model="filterType" placeholder="任务类型" clearable>
+          <el-option label="定时任务" value="定时" />
+          <el-option label="循环任务" value="间隔" />
+        </el-select>
 
-          <el-button type="success" @click="handleImportExcel">
-            <el-icon style="margin-right: 4px;"><Upload /></el-icon>
-            导入配置
-          </el-button>
-
-          <el-button type="warning" @click="handleExportExcel">
-            <el-icon style="margin-right: 4px;"><Download /></el-icon>
-            导出配置
-          </el-button>
-        </div>
+        <el-select v-model="filterStatus" placeholder="任务状态" clearable>
+          <el-option label="已启用" :value="true" />
+          <el-option label="已禁用" :value="false" />
+        </el-select>
       </div>
-    </el-card>
 
-    <el-card>
-      <el-table :data="filteredTasks" style="width: 100%" @selection-change="handleSelectionChange">
+      <div class="toolbar-right">
+        <el-button type="primary" @click="handleCreateTask">新建任务</el-button>
+        <el-button @click="handleImportExcel">导入配置</el-button>
+        <el-button @click="handleClearAll">清空</el-button>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <el-table :data="filteredTasks" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
 
-        <el-table-column prop="name" label="任务名称" width="150">
+        <el-table-column prop="recipient" label="接收对象" width="120">
           <template #default="{ row }">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <el-icon :color="row.enabled ? '#67C23A' : '#909399'">
-                <component :is="row.type === '定时' ? 'Clock' : 'Refresh'" />
-              </el-icon>
-              <span>{{ row.name }}</span>
-            </div>
+            <div class="text-ellipsis">{{ row.recipient }}</div>
           </template>
         </el-table-column>
 
-        <el-table-column prop="recipient" label="接收对象" width="120" />
-
         <el-table-column prop="content" label="发送内容" min-width="200">
           <template #default="{ row }">
-            <div v-if="row.contentType === 'text'" style="white-space: pre-wrap;">{{ row.content }}</div>
-            <div v-else style="display: flex; align-items: center; gap: 8px;">
-              <el-icon><Document /></el-icon>
-              <span>{{ row.fileName }}</span>
-            </div>
+            <div v-if="row.contentType === 'text'" class="text-ellipsis" :title="row.content">{{ row.content }}</div>
+            <div v-else class="text-ellipsis">{{ row.fileName }}</div>
           </template>
         </el-table-column>
 
         <el-table-column prop="type" label="类型" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.type === '定时' ? 'primary' : 'success'" size="small">
-              {{ row.type }}
-            </el-tag>
+            <span class="task-type-tag">{{ row.type }}</span>
           </template>
         </el-table-column>
 
         <el-table-column prop="schedule" label="执行时间" width="160">
           <template #default="{ row }">
-            <div v-if="row.type === '定时'">
-              <div>{{ row.executeTime }}</div>
-              <div style="font-size: 12px; color: #909399;">{{ row.repeatMode || '仅一次' }}</div>
-            </div>
-            <div v-else>
-              间隔 {{ row.interval }} 分钟
-            </div>
+            <div v-if="row.type === '定时'">{{ row.executeTime }}</div>
+            <div v-else>间隔 {{ row.interval }} 分钟</div>
           </template>
         </el-table-column>
 
-        <el-table-column prop="nextExecute" label="下次执行" width="160" />
+        <el-table-column prop="nextExecute" label="下次执行" width="160">
+          <template #default="{ row }">
+            <div class="text-ellipsis">{{ row.nextExecute }}</div>
+          </template>
+        </el-table-column>
 
         <el-table-column prop="executeCount" label="执行次数" width="100">
           <template #default="{ row }">
-            <el-tag size="small">{{ row.executeCount }} 次</el-tag>
+            {{ row.executeCount }} 次
           </template>
         </el-table-column>
 
-        <el-table-column prop="enabled" label="状态" width="80">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-switch v-model="row.enabled" @change="handleToggleTask(row)" />
-          </template>
-        </el-table-column>
-
-        <el-table-column label="操作" width="180" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" text size="small" @click="handleEditTask(row)">编辑</el-button>
-            <el-button type="success" text size="small" @click="handleExecuteNow(row)">立即执行</el-button>
-            <el-button type="danger" text size="small" @click="handleDeleteTask(row)">删除</el-button>
+            <el-button link type="primary" @click="handleEditTask(row)">编辑</el-button>
+            <el-button link type="danger" @click="handleDeleteTask(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+      <div class="table-footer">
         <div>
           已选择 {{ selectedTasks.length }} 项
-          <el-button v-if="selectedTasks.length > 0" type="danger" text @click="handleBatchDelete">
+          <el-button v-if="selectedTasks.length > 0" link type="danger" @click="handleBatchDelete">
             批量删除
           </el-button>
         </div>
@@ -125,14 +99,10 @@
           :total="total"
         />
       </div>
-    </el-card>
+    </div>
 
     <el-dialog v-model="taskDialogVisible" :title="editingTask ? '编辑任务' : '新建任务'" width="600px">
       <el-form :model="taskForm" label-width="100px" :rules="taskRules">
-        <el-form-item label="任务名称" prop="name">
-          <el-input v-model="taskForm.name" placeholder="例如：早会提醒" />
-        </el-form-item>
-
         <el-form-item label="接收对象" prop="recipient">
           <el-input v-model="taskForm.recipient" placeholder="微信好友或群聊备注名称">
             <template #append>
@@ -151,7 +121,7 @@
         <el-form-item v-if="taskForm.contentType === 'text'" label="消息内容" prop="content">
           <el-input v-model="taskForm.content" type="textarea" :rows="4" placeholder="输入消息内容" />
           <div style="margin-top: 8px;">
-            <el-checkbox v-model="taskForm.autoSplit">智能拆句（长消息自动拆分）</el-checkbox>
+            <el-checkbox v-model="taskForm.autoSplit">智能拆句(长消息自动拆分)</el-checkbox>
           </div>
         </el-form-item>
 
@@ -218,11 +188,7 @@
         </el-form-item>
 
         <el-form-item label="高级设置">
-          <el-checkbox v-model="taskForm.retryOnFail">失败时自动重试（最多3次）</el-checkbox>
-        </el-form-item>
-
-        <el-form-item label="任务备注">
-          <el-input v-model="taskForm.remark" type="textarea" :rows="2" placeholder="任务备注（可选）" />
+          <el-checkbox v-model="taskForm.retryOnFail">失败时自动重试(最多3次)</el-checkbox>
         </el-form-item>
       </el-form>
 
@@ -231,17 +197,51 @@
         <el-button type="primary" @click="handleSaveTask">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="importDialogVisible" title="导入配置" width="500px">
+      <div class="import-dialog-content">
+        <div class="import-tips">
+          <p>请上传 Excel 文件导入任务配置</p>
+          <p class="import-tip-text">支持格式: .xlsx, .xls</p>
+        </div>
+
+        <el-upload
+          ref="uploadRef"
+          :auto-upload="false"
+          :limit="1"
+          accept=".xlsx,.xls"
+          :on-change="handleFileChange"
+          drag
+        >
+          <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+          <div class="el-upload__text">
+            拖拽文件到此处，或<em>点击上传</em>
+          </div>
+        </el-upload>
+
+        <div class="download-template">
+          <el-button link type="primary" @click="handleDownloadTemplate">
+            <el-icon><Download /></el-icon>
+            下载导入模板
+          </el-button>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="importDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleConfirmImport">确认导入</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus, Upload, Download, Clock, Refresh, Document } from '@element-plus/icons-vue'
+import { Search, Download, UploadFilled } from '@element-plus/icons-vue'
 
 interface Task {
   id: number
-  name: string
   recipient: string
   content: string
   contentType: 'text' | 'file'
@@ -258,7 +258,6 @@ interface Task {
   executeCount: number
   autoSplit: boolean
   retryOnFail: boolean
-  remark?: string
 }
 
 const searchKeyword = ref('')
@@ -269,15 +268,17 @@ const pageSize = ref(10)
 const selectedTasks = ref<Task[]>([])
 const taskDialogVisible = ref(false)
 const editingTask = ref<Task | null>(null)
+const importDialogVisible = ref(false)
+const uploadRef = ref()
+const selectedFile = ref<File | null>(null)
 
 const tasks = ref<Task[]>([
-  { id: 1, name: '早会提醒', recipient: '技术部群', content: '各位同事，早会时间到了，请大家准时参加会议。', contentType: 'text', type: '定时', executeTime: '2025-07-20 09:00', repeatMode: '工作日', nextExecute: '2025-07-20 09:00', enabled: true, executeCount: 45, autoSplit: false, retryOnFail: true },
-  { id: 2, name: '日报提醒', recipient: '工作群', content: '请大家记得提交今日工作日报。', contentType: 'text', type: '间隔', interval: 120, nextExecute: '2025-07-19 18:00', enabled: true, executeCount: 128, autoSplit: false, retryOnFail: false },
-  { id: 3, name: '周报发送', recipient: '张总', content: '', contentType: 'file', fileName: '周报.xlsx', type: '定时', executeTime: '2025-07-21 18:00', repeatMode: '', nextExecute: '2025-07-21 18:00', enabled: false, executeCount: 12, autoSplit: false, retryOnFail: true }
+  { id: 1, recipient: '技术部群', content: '各位同事,早会时间到了,请大家准时参加会议。', contentType: 'text', type: '定时', executeTime: '2025-07-20 09:00', repeatMode: '工作日', nextExecute: '2025-07-20 09:00', enabled: true, executeCount: 45, autoSplit: false, retryOnFail: true },
+  { id: 2, recipient: '工作群', content: '请大家记得提交今日工作日报。', contentType: 'text', type: '间隔', interval: 120, nextExecute: '2025-07-19 18:00', enabled: true, executeCount: 128, autoSplit: false, retryOnFail: false },
+  { id: 3, recipient: '张总', content: '', contentType: 'file', fileName: '周报.xlsx', type: '定时', executeTime: '2025-07-21 18:00', repeatMode: '', nextExecute: '2025-07-21 18:00', enabled: false, executeCount: 12, autoSplit: false, retryOnFail: true }
 ])
 
 const taskForm = ref({
-  name: '',
   recipient: '',
   content: '',
   contentType: 'text' as 'text' | 'file',
@@ -290,19 +291,17 @@ const taskForm = ref({
   executeMode: '无限',
   maxExecuteCount: 10,
   autoSplit: false,
-  retryOnFail: true,
-  remark: ''
+  retryOnFail: true
 })
 
 const taskRules = {
-  name: [{ required: true, message: '请输入任务名称', trigger: 'blur' }],
   recipient: [{ required: true, message: '请输入接收对象', trigger: 'blur' }],
   content: [{ required: true, message: '请输入消息内容', trigger: 'blur' }]
 }
 
 const filteredTasks = computed(() => {
   return tasks.value.filter(task => {
-    const matchKeyword = !searchKeyword.value || task.name.includes(searchKeyword.value) || task.recipient.includes(searchKeyword.value)
+    const matchKeyword = !searchKeyword.value || task.recipient.includes(searchKeyword.value)
     const matchType = !filterType.value || task.type === filterType.value
     const matchStatus = filterStatus.value === '' || task.enabled === filterStatus.value
     return matchKeyword && matchType && matchStatus
@@ -314,7 +313,6 @@ const total = computed(() => filteredTasks.value.length)
 const handleCreateTask = () => {
   editingTask.value = null
   taskForm.value = {
-    name: '',
     recipient: '',
     content: '',
     contentType: 'text',
@@ -327,8 +325,7 @@ const handleCreateTask = () => {
     executeMode: '无限',
     maxExecuteCount: 10,
     autoSplit: false,
-    retryOnFail: true,
-    remark: ''
+    retryOnFail: true
   }
   taskDialogVisible.value = true
 }
@@ -340,7 +337,7 @@ const handleEditTask = (task: Task) => {
 }
 
 const handleSaveTask = () => {
-  if (!taskForm.value.name || !taskForm.value.recipient) {
+  if (!taskForm.value.recipient) {
     ElMessage.warning('请填写完整信息')
     return
   }
@@ -370,7 +367,7 @@ const handleSaveTask = () => {
 }
 
 const handleDeleteTask = (task: Task) => {
-  ElMessageBox.confirm('确定要删除该任务吗？', '确认删除', {
+  ElMessageBox.confirm('确定要删除该任务吗?', '确认删除', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
@@ -396,7 +393,7 @@ const handleSelectionChange = (selection: Task[]) => {
 }
 
 const handleBatchDelete = () => {
-  ElMessageBox.confirm(`确定要删除选中的 ${selectedTasks.value.length} 个任务吗？`, '确认删除', {
+  ElMessageBox.confirm(`确定要删除选中的 ${selectedTasks.value.length} 个任务吗?`, '确认删除', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
@@ -413,11 +410,41 @@ const handleBatchDelete = () => {
 }
 
 const handleImportExcel = () => {
-  ElMessage.info('导入功能开发中')
+  importDialogVisible.value = true
 }
 
-const handleExportExcel = () => {
-  ElMessage.info('导出功能开发中')
+const handleClearAll = () => {
+  ElMessageBox.confirm('确定要清空所有任务吗？此操作不可恢复！', '确认清空', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    tasks.value = []
+    ElMessage.success('已清空所有任务')
+  }).catch(() => {
+    // 用户取消
+  })
+}
+
+const handleFileChange = (file: any) => {
+  selectedFile.value = file.raw
+}
+
+const handleDownloadTemplate = () => {
+  ElMessage.success('模板下载成功')
+  // 实际项目中这里应该下载真实的 Excel 模板
+}
+
+const handleConfirmImport = () => {
+  if (!selectedFile.value) {
+    ElMessage.warning('请选择文件')
+    return
+  }
+
+  // 实际项目中这里应该解析 Excel 文件并导入数据
+  ElMessage.success('导入成功')
+  importDialogVisible.value = false
+  selectedFile.value = null
 }
 
 const handleSelectContact = () => {
@@ -428,3 +455,111 @@ const handleSelectFile = () => {
   ElMessage.info('文件选择功能开发中')
 }
 </script>
+
+<style scoped>
+.auto-message-page {
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 32px;
+}
+
+.page-title {
+  font-size: 48px;
+  font-weight: 300;
+  color: #061b31;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.96px;
+}
+
+.page-subtitle {
+  font-size: 22px;
+  color: #64748d;
+  margin: 0;
+  font-weight: 300;
+  letter-spacing: -0.22px;
+}
+
+.divider {
+  height: 1px;
+  background: #e5edf5;
+  margin: 52px 0;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  gap: 16px;
+}
+
+.toolbar-left {
+  display: flex;
+  gap: 12px;
+}
+
+.toolbar-right {
+  display: flex;
+  gap: 12px;
+}
+
+.table-wrapper {
+  background: #ffffff;
+}
+
+.table-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5edf5;
+}
+
+.task-type-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 400;
+  border-radius: 9999px;
+  background: #e8e9ff;
+  color: #533afd;
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.import-dialog-content {
+  padding: 20px 0;
+}
+
+.import-tips {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.import-tips p {
+  margin: 0;
+  font-size: 16px;
+  color: #061b31;
+  font-weight: 300;
+}
+
+.import-tip-text {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #64748d;
+}
+
+.download-template {
+  margin-top: 24px;
+  text-align: center;
+}
+</style>

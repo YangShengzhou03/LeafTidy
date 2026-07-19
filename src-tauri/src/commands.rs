@@ -26,6 +26,7 @@ pub struct WeChatStatus {
     pub online: bool,
     pub username: Option<String>,
     pub login_time: Option<String>,
+    pub task_running: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -48,11 +49,13 @@ pub fn get_wechat_status() -> WeChatStatus {
                 online: true,
                 username: Some(username),
                 login_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+                task_running: false, // 任务运行状态由前端维护
             },
             Err(_) => WeChatStatus {
                 online: false,
                 username: None,
                 login_time: None,
+                task_running: false,
             },
         }
     }

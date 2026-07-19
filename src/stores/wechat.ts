@@ -6,6 +6,7 @@ export interface WeChatStatus {
   online: boolean
   username: string | null
   login_time: string | null
+  task_running: boolean
 }
 
 export interface SendMessageResult {
@@ -22,7 +23,8 @@ export const useWeChatStore = defineStore('wechat', () => {
   const status = ref<WeChatStatus>({
     online: false,
     username: null,
-    login_time: null
+    login_time: null,
+    task_running: false
   })
 
   const loading = ref(false)
@@ -31,17 +33,27 @@ export const useWeChatStore = defineStore('wechat', () => {
     loading.value = true
     try {
       const result = await invoke<WeChatStatus>('get_wechat_status')
-      status.value = result
+      // 保留本地维护的 task_running 状态
+      const currentTaskRunning = status.value.task_running
+      status.value = {
+        ...result,
+        task_running: currentTaskRunning
+      }
     } catch (error) {
       console.error('检查微信状态失败:', error)
       status.value = {
         online: false,
         username: null,
-        login_time: null
+        login_time: null,
+        task_running: false
       }
     } finally {
       loading.value = false
     }
+  }
+
+  function setTaskRunning(running: boolean) {
+    status.value.task_running = running
   }
 
   async function sendMessage(recipient: string, message: string): Promise<SendMessageResult> {
@@ -74,6 +86,7 @@ export const useWeChatStore = defineStore('wechat', () => {
     status,
     loading,
     checkStatus,
+    setTaskRunning,
     sendMessage,
     sendFile
   }

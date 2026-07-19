@@ -1,16 +1,29 @@
 <template>
-  <div>
-    <el-tabs v-model="activeTab" type="border-card">
-      <el-tab-pane label="基本设置" name="basic">
+  <div class="settings-page">
+    <div class="settings-sidebar">
+      <nav class="settings-nav">
+        <a
+          v-for="item in menuItems"
+          :key="item.id"
+          :href="'#' + item.id"
+          class="settings-nav-item"
+          :class="{ 'active': activeSection === item.id }"
+          @click="scrollToSection(item.id)"
+        >
+          {{ item.label }}
+        </a>
+      </nav>
+    </div>
+
+    <div class="settings-content" ref="contentRef">
+      <div class="settings-section" id="basic">
+        <h2 class="section-title">基本设置</h2>
         <el-form :model="basicSettings" label-width="140px">
           <el-form-item label="联系人匹配模式">
             <el-radio-group v-model="basicSettings.matchMode">
               <el-radio value="exact">精确匹配</el-radio>
               <el-radio value="fuzzy">模糊匹配</el-radio>
             </el-radio-group>
-            <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-              精确匹配：联系人名必须完全一致；模糊匹配：相近包含即可
-            </div>
           </el-form-item>
 
           <el-form-item label="语言">
@@ -23,16 +36,10 @@
 
           <el-form-item label="网络时间同步">
             <el-switch v-model="basicSettings.syncNetworkTime" />
-            <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-              启用后将自动同步网络时间，确保定时任务精准执行
-            </div>
           </el-form-item>
 
           <el-form-item label="关闭到托盘">
             <el-switch v-model="basicSettings.minimizeToTray" />
-            <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-              关闭窗口时最小化到系统托盘，继续执行后台任务
-            </div>
           </el-form-item>
 
           <el-form-item label="自动更新">
@@ -47,16 +54,16 @@
             <el-button type="primary" @click="handleSaveBasicSettings">保存设置</el-button>
           </el-form-item>
         </el-form>
-      </el-tab-pane>
+      </div>
 
-      <el-tab-pane label="微信监控" name="wechat">
+      <div class="divider"></div>
+
+      <div class="settings-section" id="wechat">
+        <h2 class="section-title">微信监控</h2>
         <el-form :model="wechatSettings" label-width="140px">
           <el-form-item label="掉线检测间隔">
             <el-input-number v-model="wechatSettings.checkInterval" :min="1" :max="60" />
             <span style="margin-left: 8px;">分钟</span>
-            <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-              定期检测微信是否在线，建议设置 1-5 分钟
-            </div>
           </el-form-item>
 
           <el-form-item label="掉线后行为">
@@ -84,16 +91,16 @@
             <el-button type="primary" @click="handleSaveWechatSettings">保存设置</el-button>
           </el-form-item>
         </el-form>
-      </el-tab-pane>
+      </div>
 
-      <el-tab-pane label="任务执行" name="task">
+      <div class="divider"></div>
+
+      <div class="settings-section" id="task">
+        <h2 class="section-title">任务执行</h2>
         <el-form :model="taskSettings" label-width="140px">
           <el-form-item label="失败重试次数">
             <el-input-number v-model="taskSettings.retryTimes" :min="0" :max="10" />
             <span style="margin-left: 8px;">次</span>
-            <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-              任务执行失败时自动重试，设置为 0 表示不重试
-            </div>
           </el-form-item>
 
           <el-form-item label="重试间隔">
@@ -104,9 +111,6 @@
           <el-form-item label="并发任务数">
             <el-input-number v-model="taskSettings.concurrentTasks" :min="1" :max="10" />
             <span style="margin-left: 8px;">个</span>
-            <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-              同时执行的任务数量，建议不超过 5 个
-            </div>
           </el-form-item>
 
           <el-form-item label="任务执行超时">
@@ -116,9 +120,6 @@
 
           <el-form-item label="智能拆句">
             <el-switch v-model="taskSettings.autoSplit" />
-            <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-              自动拆分长消息，避免消息过长发送失败
-            </div>
           </el-form-item>
 
           <el-form-item v-if="taskSettings.autoSplit" label="拆句长度">
@@ -138,22 +139,19 @@
             <el-button type="primary" @click="handleSaveTaskSettings">保存设置</el-button>
           </el-form-item>
         </el-form>
-      </el-tab-pane>
+      </div>
 
-      <el-tab-pane label="系统优化" name="system">
+      <div class="divider"></div>
+
+      <div class="settings-section" id="system">
+        <h2 class="section-title">系统优化</h2>
         <el-form :model="systemSettings" label-width="140px">
           <el-form-item label="防电脑休眠">
             <el-switch v-model="systemSettings.preventSleep" />
-            <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-              保持系统唤醒状态，防止任务执行中断
-            </div>
           </el-form-item>
 
           <el-form-item label="低性能模式">
             <el-switch v-model="systemSettings.lowPerformanceMode" />
-            <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-              降低 CPU 和内存占用，适合老旧电脑
-            </div>
           </el-form-item>
 
           <el-form-item label="日志保留天数">
@@ -178,16 +176,19 @@
             <el-button type="primary" @click="handleSaveSystemSettings">保存设置</el-button>
           </el-form-item>
         </el-form>
-      </el-tab-pane>
+      </div>
 
-      <el-tab-pane label="授权管理" name="license">
-        <el-card style="max-width: 500px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <div class="divider"></div>
+
+      <div class="settings-section" id="license">
+        <h2 class="section-title">授权管理</h2>
+        <div class="license-card">
+          <div class="license-header">
             <div>
-              <div style="font-size: 18px; font-weight: bold;">轻羽大师版</div>
-              <div style="color: #909399; font-size: 14px;">{{ licenseInfo.status }}</div>
+              <div class="license-name">LeafMaster - 轻羽大师版</div>
+              <div class="license-status">{{ licenseInfo.status }}</div>
             </div>
-            <el-tag :type="licenseInfo.type" size="large">{{ licenseInfo.label }}</el-tag>
+            <span class="license-tag">{{ licenseInfo.label }}</span>
           </div>
 
           <el-form label-width="100px">
@@ -208,49 +209,70 @@
             </el-form-item>
           </el-form>
 
-          <el-alert title="定价说明" type="info" :closable="false" style="margin-top: 20px;">
-            <div>试用版：免费试用 7 天，功能无限制</div>
-            <div>正式版：¥399 永久授权，一次购买终身使用</div>
-            <div style="margin-top: 8px;">增值服务：售后 ¥29.9 起，维护 ¥49.9 起，培训 ¥69.9 起</div>
-          </el-alert>
-        </el-card>
-      </el-tab-pane>
+          <div class="pricing-info">
+            <div class="pricing-item">试用版:免费试用 7 天,功能无限制</div>
+            <div class="pricing-item">正式版:¥399 永久授权,一次购买终身使用</div>
+            <div class="pricing-item">增值服务:售后 ¥29.9 起,维护 ¥49.9 起,培训 ¥69.9 起</div>
+          </div>
+        </div>
+      </div>
 
-      <el-tab-pane label="关于" name="about">
-        <el-card style="max-width: 600px;">
-          <div style="text-align: center; padding: 20px 0;">
-            <div style="font-size: 24px; font-weight: bold; margin-bottom: 12px;">轻羽大师版</div>
-            <div style="color: #909399; margin-bottom: 24px;">专业级微信自动化系统</div>
+      <div class="divider"></div>
 
-            <el-descriptions :column="1" border>
-              <el-descriptions-item label="应用版本">v1.0.0</el-descriptions-item>
-              <el-descriptions-item label="更新时间">2025-07-19</el-descriptions-item>
-              <el-descriptions-item label="官方网站">
-                <a href="https://gitee.com/Yangshengzhou/LeafAuto" target="_blank">Gitee 主页</a>
-              </el-descriptions-item>
-              <el-descriptions-item label="技术支持">yangsz03@foxmail.com</el-descriptions-item>
-            </el-descriptions>
+      <div class="settings-section" id="about">
+        <h2 class="section-title">关于</h2>
+        <div class="about-card">
+          <div class="about-title">LeafMaster - 轻羽大师版</div>
+          <div class="about-subtitle">专业级微信自动化系统</div>
 
-            <div style="margin-top: 24px;">
-              <el-button type="primary" @click="handleCheckUpdate">检查更新</el-button>
-              <el-button @click="handleOpenWebsite">访问官网</el-button>
+          <div class="about-info">
+            <div class="info-row">
+              <span class="info-label">应用版本</span>
+              <span class="info-value">v1.0.0</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">更新时间</span>
+              <span class="info-value">2025-07-19</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">官方网站</span>
+              <a href="https://gitee.com/Yangshengzhou/LeafAuto" target="_blank" class="link-text">Gitee 主页</a>
+            </div>
+            <div class="info-row">
+              <span class="info-label">技术支持</span>
+              <span class="info-value">yangsz03@foxmail.com</span>
             </div>
           </div>
-        </el-card>
-      </el-tab-pane>
-    </el-tabs>
+
+          <div class="about-actions">
+            <el-button type="primary" @click="handleCheckUpdate">检查更新</el-button>
+            <el-button @click="handleOpenWebsite">访问官网</el-button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 
-const activeTab = ref('basic')
 const activationCode = ref('')
+const activeSection = ref('basic')
+const contentRef = ref<HTMLElement | null>(null)
+
+const menuItems = [
+  { id: 'basic', label: '基本设置' },
+  { id: 'wechat', label: '微信监控' },
+  { id: 'task', label: '任务执行' },
+  { id: 'system', label: '系统优化' },
+  { id: 'license', label: '授权管理' },
+  { id: 'about', label: '关于' }
+]
 
 const licenseInfo = ref({
-  status: '试用版（剩余 7 天）',
+  status: '试用版(剩余 7 天)',
   type: 'warning',
   label: '试用中',
   trialDays: 7
@@ -289,6 +311,45 @@ const systemSettings = ref({
   logRetentionDays: 7,
   autoCleanTasks: false,
   cleanTime: new Date(2025, 0, 1, 3, 0, 0)
+})
+
+const scrollToSection = (sectionId: string) => {
+  const element = document.getElementById(sectionId)
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}
+
+const handleScroll = () => {
+  if (!contentRef.value) return
+
+  const sections = menuItems.map(item => ({
+    id: item.id,
+    element: document.getElementById(item.id)
+  }))
+
+  for (let i = sections.length - 1; i >= 0; i--) {
+    const section = sections[i]
+    if (section.element) {
+      const rect = section.element.getBoundingClientRect()
+      if (rect.top <= 100) {
+        activeSection.value = section.id
+        break
+      }
+    }
+  }
+}
+
+onMounted(() => {
+  if (contentRef.value) {
+    contentRef.value.addEventListener('scroll', handleScroll)
+  }
+})
+
+onUnmounted(() => {
+  if (contentRef.value) {
+    contentRef.value.removeEventListener('scroll', handleScroll)
+  }
 })
 
 const handleSaveBasicSettings = () => {
@@ -339,3 +400,195 @@ const handleOpenWebsite = () => {
   window.open('https://gitee.com/Yangshengzhou/LeafAuto', '_blank')
 }
 </script>
+
+<style scoped>
+.settings-page {
+  display: flex;
+  height: 100%;
+  background: #ffffff;
+}
+
+.settings-sidebar {
+  width: 200px;
+  border-right: 1px solid #e5edf5;
+  padding: 32px 0;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 12px;
+}
+
+.settings-nav-item {
+  display: block;
+  padding: 12px 16px;
+  color: #061b31;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  transition: background 0.2s;
+}
+
+.settings-nav-item:hover {
+  background: #f8fafd;
+}
+
+.settings-nav-item.active {
+  background: #533afd;
+  color: #ffffff;
+}
+
+.settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px;
+}
+
+.settings-section {
+  margin-bottom: 0;
+}
+
+.section-title {
+  font-size: 32px;
+  font-weight: 300;
+  color: #061b31;
+  margin: 0 0 32px 0;
+  letter-spacing: -0.64px;
+}
+
+.divider {
+  height: 1px;
+  background: #e5edf5;
+  margin: 52px 0;
+}
+
+.license-card {
+  padding: 32px;
+  background: #ffffff;
+  border: 1px solid #e5edf5;
+  border-radius: 4px;
+  max-width: 500px;
+}
+
+.license-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.license-name {
+  font-size: 18px;
+  font-weight: 300;
+  color: #061b31;
+  margin-bottom: 4px;
+}
+
+.license-status {
+  font-size: 14px;
+  color: #64748d;
+  font-weight: 300;
+}
+
+.license-tag {
+  display: inline-block;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 400;
+  border-radius: 4px;
+  background: #e8e9ff;
+  color: #533afd;
+}
+
+.pricing-info {
+  margin-top: 24px;
+  padding: 16px;
+  background: #f8fafd;
+  border-radius: 4px;
+}
+
+.pricing-item {
+  font-size: 14px;
+  color: #50617a;
+  font-weight: 300;
+  margin-bottom: 8px;
+}
+
+.pricing-item:last-child {
+  margin-bottom: 0;
+}
+
+.about-card {
+  padding: 32px;
+  background: #ffffff;
+  border: 1px solid #e5edf5;
+  border-radius: 4px;
+  max-width: 600px;
+  text-align: center;
+}
+
+.about-title {
+  font-size: 24px;
+  font-weight: 300;
+  color: #061b31;
+  margin-bottom: 8px;
+}
+
+.about-subtitle {
+  font-size: 14px;
+  color: #64748d;
+  font-weight: 300;
+  margin-bottom: 32px;
+}
+
+.about-info {
+  text-align: left;
+  margin-bottom: 32px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #e5edf5;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 14px;
+  color: #64748d;
+  font-weight: 300;
+}
+
+.info-value {
+  font-size: 14px;
+  color: #061b31;
+  font-weight: 400;
+}
+
+.link-text {
+  font-size: 14px;
+  font-weight: 400;
+  color: #533afd;
+  text-decoration: none;
+}
+
+.link-text:hover {
+  color: #7389ff;
+}
+
+.about-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+</style>
