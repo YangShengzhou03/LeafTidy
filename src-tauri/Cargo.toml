@@ -1,15 +1,15 @@
 [package]
-name = "leafnova"
-version = "0.1.0"
+name = "leafmaster"
+version = "1.0.0"
 edition = "2021"
-default-run = "leafnova-tauri"
+default-run = "leafmaster-tauri"
 
 [lib]
-name = "leafnova"
+name = "leafmaster"
 path = "src/lib.rs"
 
 [[bin]]
-name = "leafnova-tauri"
+name = "leafmaster-tauri"
 path = "src/tauri_main.rs"
 
 [dependencies]
