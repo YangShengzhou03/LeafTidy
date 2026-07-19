@@ -90,36 +90,15 @@
               快速发送消息
             </el-button>
 
-            <el-button type="warning" size="large" @click="handleImportTasks">
+            <el-button type="warning" size="large" @click="handleImportExcel">
               <el-icon style="margin-right: 8px;"><Upload /></el-icon>
-              导入任务配置
+              Excel 导入任务
             </el-button>
 
-            <el-button type="info" size="large" @click="handleExportTasks">
+            <el-button type="info" size="large" @click="handleDownloadTemplate">
               <el-icon style="margin-right: 8px;"><Download /></el-icon>
-              导出任务配置
+              下载任务模板
             </el-button>
-          </div>
-        </el-card>
-
-        <el-card style="margin-top: 20px;">
-          <template #header>
-            <span>系统信息</span>
-          </template>
-
-          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #666;">
-            <div style="display: flex; justify-content: space-between;">
-              <span>应用版本</span>
-              <span>v1.0.0</span>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-              <span>技术栈</span>
-              <span>ElementPlus + Rust</span>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-              <span>运行时间</span>
-              <span>{{ uptime }}</span>
-            </div>
           </div>
         </el-card>
       </el-col>
@@ -128,7 +107,7 @@
     <el-dialog v-model="quickSendVisible" title="快速发送消息" width="500px">
       <el-form :model="quickSendForm" label-width="80px">
         <el-form-item label="接收者">
-          <el-input v-model="quickSendForm.recipient" placeholder="微信好友名称" />
+          <el-input v-model="quickSendForm.recipient" placeholder="微信好友或群聊备注名称" />
         </el-form-item>
 
         <el-form-item label="消息内容">
@@ -145,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Document, CircleCheck, TrendCharts, Plus, ChatDotRound, Upload, Download } from '@element-plus/icons-vue'
 
@@ -172,19 +151,16 @@ const quickSendForm = ref({
   message: ''
 })
 
-const uptime = ref('00:00:00')
-let uptimeInterval: number
-
 const handleQuickSend = () => {
   quickSendVisible.value = true
 }
 
-const handleImportTasks = () => {
-  ElMessage.info('导入功能开发中')
+const handleImportExcel = () => {
+  ElMessage.info('Excel 导入功能开发中')
 }
 
-const handleExportTasks = () => {
-  ElMessage.info('导出功能开发中')
+const handleDownloadTemplate = () => {
+  ElMessage.info('模板下载功能开发中')
 }
 
 const handleSendQuickMessage = () => {
@@ -197,19 +173,4 @@ const handleSendQuickMessage = () => {
   quickSendVisible.value = false
   quickSendForm.value = { recipient: '', message: '' }
 }
-
-onMounted(() => {
-  let seconds = 0
-  uptimeInterval = window.setInterval(() => {
-    seconds++
-    const h = Math.floor(seconds / 3600)
-    const m = Math.floor((seconds % 3600) / 60)
-    const s = seconds % 60
-    uptime.value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  }, 1000)
-})
-
-onUnmounted(() => {
-  clearInterval(uptimeInterval)
-})
 </script>
