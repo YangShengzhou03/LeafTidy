@@ -5,6 +5,7 @@ import { invoke } from '@tauri-apps/api/core'
 export interface WeChatStatus {
   online: boolean
   username: string | null
+  wechat_id: string | null
   login_time: string | null
   task_running: boolean
 }
@@ -23,6 +24,7 @@ export const useWeChatStore = defineStore('wechat', () => {
   const status = ref<WeChatStatus>({
     online: false,
     username: null,
+    wechat_id: null,
     login_time: null,
     task_running: false
   })
@@ -44,6 +46,7 @@ export const useWeChatStore = defineStore('wechat', () => {
       status.value = {
         online: false,
         username: null,
+        wechat_id: null,
         login_time: null,
         task_running: false
       }

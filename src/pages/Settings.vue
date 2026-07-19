@@ -50,6 +50,16 @@
             <el-switch v-model="basicSettings.autoStart" />
           </el-form-item>
 
+          <el-form-item label="过期任务处理">
+            <el-radio-group v-model="basicSettings.expiredTaskAction">
+              <el-radio value="execute">立即执行</el-radio>
+              <el-radio value="skip">不再执行</el-radio>
+            </el-radio-group>
+            <div class="form-item-tip">
+              选择如何处理执行时间已过的定时任务
+            </div>
+          </el-form-item>
+
           <el-form-item>
             <el-button type="primary" @click="handleSaveBasicSettings">保存设置</el-button>
           </el-form-item>
@@ -284,7 +294,8 @@ const basicSettings = ref({
   syncNetworkTime: true,
   minimizeToTray: true,
   autoUpdate: true,
-  autoStart: false
+  autoStart: false,
+  expiredTaskAction: 'execute'
 })
 
 const wechatSettings = ref({
@@ -312,6 +323,37 @@ const systemSettings = ref({
   autoCleanTasks: false,
   cleanTime: new Date(2025, 0, 1, 3, 0, 0)
 })
+
+// 从 localStorage 加载设置
+const loadSettings = () => {
+  try {
+    const saved = localStorage.getItem('leafmaster_settings')
+    if (saved) {
+      const data = JSON.parse(saved)
+      basicSettings.value = { ...basicSettings.value, ...data.basic }
+      wechatSettings.value = { ...wechatSettings.value, ...data.wechat }
+      taskSettings.value = { ...taskSettings.value, ...data.task }
+      systemSettings.value = { ...systemSettings.value, ...data.system }
+    }
+  } catch (error) {
+    console.error('加载设置失败:', error)
+  }
+}
+
+// 保存设置到 localStorage
+const saveSettings = () => {
+  try {
+    const data = {
+      basic: basicSettings.value,
+      wechat: wechatSettings.value,
+      task: taskSettings.value,
+      system: systemSettings.value
+    }
+    localStorage.setItem('leafmaster_settings', JSON.stringify(data))
+  } catch (error) {
+    console.error('保存设置失败:', error)
+  }
+}
 
 const scrollToSection = (sectionId: string) => {
   const element = document.getElementById(sectionId)
@@ -344,6 +386,7 @@ onMounted(() => {
   if (contentRef.value) {
     contentRef.value.addEventListener('scroll', handleScroll)
   }
+  loadSettings()
 })
 
 onUnmounted(() => {
@@ -353,27 +396,88 @@ onUnmounted(() => {
 })
 
 const handleSaveBasicSettings = () => {
+  saveSettings()
   ElMessage.success('基本设置已保存')
 }
 
 const handleSaveWechatSettings = () => {
+  saveSettings()
   ElMessage.success('微信监控设置已保存')
 }
 
 const handleSaveTaskSettings = () => {
+  saveSettings()
   ElMessage.success('任务执行设置已保存')
 }
 
 const handleSaveSystemSettings = () => {
+  saveSettings()
   ElMessage.success('系统优化设置已保存')
 }
 
 const handleBackupData = () => {
-  ElMessage.info('数据备份功能开发中')
+  try {
+    const backupData = {
+      settings: {
+        basic: basicSettings.value,
+        wechat: wechatSettings.value,
+        task: taskSettings.value,
+        system: systemSettings.value
+      },
+      tasks: JSON.parse(localStorage.getItem('leafmaster_tasks') || '[]')
+    }
+
+    const dataStr = JSON.stringify(backupData, null, 2)
+    const blob = new Blob([dataStr], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `leafmaster-backup-${new Date().toISOString().slice(0, 10)}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+
+    ElMessage.success('数据备份成功')
+  } catch (error) {
+    console.error('备份数据失败:', error)
+    ElMessage.error('数据备份失败')
+  }
 }
 
 const handleRestoreData = () => {
-  ElMessage.info('数据恢复功能开发中')
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.json'
+
+  input.onchange = async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0]
+    if (!file) return
+
+    try {
+      const text = await file.text()
+      const backupData = JSON.parse(text)
+
+      // 恢复设置
+      if (backupData.settings) {
+        basicSettings.value = { ...basicSettings.value, ...backupData.settings.basic }
+        wechatSettings.value = { ...wechatSettings.value, ...backupData.settings.wechat }
+        taskSettings.value = { ...taskSettings.value, ...backupData.settings.task }
+        systemSettings.value = { ...systemSettings.value, ...backupData.settings.system }
+        saveSettings()
+      }
+
+      // 恢复任务
+      if (backupData.tasks) {
+        localStorage.setItem('leafmaster_tasks', JSON.stringify(backupData.tasks))
+      }
+
+      ElMessage.success('数据恢复成功')
+    } catch (error) {
+      console.error('恢复数据失败:', error)
+      ElMessage.error('数据恢复失败，请选择有效的备份文件')
+    }
+  }
+
+  input.click()
 }
 
 const handleActivate = () => {

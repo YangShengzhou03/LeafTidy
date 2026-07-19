@@ -25,6 +25,7 @@ const SHORT_DELAY: std::time::Duration = std::time::Duration::from_millis(100);
 pub struct WeChatStatus {
     pub online: bool,
     pub username: Option<String>,
+    pub wechat_id: Option<String>,
     pub login_time: Option<String>,
     pub task_running: bool,
 }
@@ -43,20 +44,30 @@ pub struct SendFileResponse {
 
 #[tauri::command]
 pub fn get_wechat_status() -> WeChatStatus {
+    log_info!("WeChat", "开始检测微信状态");
+
     unsafe {
         match detect_wechat() {
-            Ok(username) => WeChatStatus {
-                online: true,
-                username: Some(username),
-                login_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
-                task_running: false, // 任务运行状态由前端维护
-            },
-            Err(_) => WeChatStatus {
-                online: false,
-                username: None,
-                login_time: None,
-                task_running: false,
-            },
+            Ok((username, wechat_id)) => {
+                log_info!("WeChat", "微信已连接: {} ({})", username, wechat_id);
+                WeChatStatus {
+                    online: true,
+                    username: Some(username.clone()),
+                    wechat_id: Some(wechat_id.clone()),
+                    login_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+                    task_running: false,
+                }
+            }
+            Err(e) => {
+                log_warn!("WeChat", "微信未连接: {:?}", e);
+                WeChatStatus {
+                    online: false,
+                    username: None,
+                    wechat_id: None,
+                    login_time: None,
+                    task_running: false,
+                }
+            }
         }
     }
 }
@@ -95,24 +106,23 @@ pub fn send_file(recipient: String, filepath: String) -> SendFileResponse {
 
 // ============ 微信检测 ============
 
-unsafe fn detect_wechat() -> Result<String> {
+unsafe fn detect_wechat() -> Result<(String, String)> {
     let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
 
     let automation: IUIAutomation = CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER)?;
     let root = automation.GetRootElement()?;
-
     let window = locate_wechat_window(&automation, &root)?;
     activate_wechat_window(&window)?;
 
-    if let Ok(username) = get_avatar_username(&automation, &window) {
-        return Ok(username);
-    }
+    let username = get_avatar_username(&automation, &window)
+        .or_else(|_| get_username_from_tab(&automation, &window, &root))
+        .map_err(|e| {
+            log_error!("WeChat", "获取用户名失败: {:?}", e);
+            e
+        })?;
 
-    if let Ok(username) = get_username_from_tab(&automation, &window, &root) {
-        return Ok(username);
-    }
-
-    Err(Error::from(E_FAIL))
+    log_info!("WeChat", "微信已连接: {}", username);
+    Ok((username, String::new()))
 }
 
 unsafe fn get_avatar_username(automation: &IUIAutomation, window: &IUIAutomationElement) -> Result<String> {
@@ -130,6 +140,7 @@ unsafe fn get_avatar_username(automation: &IUIAutomation, window: &IUIAutomation
     }
     Ok(name)
 }
+
 
 unsafe fn get_username_from_tab(
     automation: &IUIAutomation,

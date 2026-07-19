@@ -8,6 +8,7 @@
         <div class="wechat-user" v-if="wechatStore.status.online" @click="handleRefreshStatus">
           <div class="user-avatar">{{ wechatStore.status.username ? wechatStore.status.username.charAt(0) : '微' }}</div>
           <span class="user-name">{{ wechatStore.status.username || '微信用户' }}</span>
+          <span class="user-wechat-id" v-if="wechatStore.status.wechat_id">({{ wechatStore.status.wechat_id }})</span>
           <span class="user-status" :class="statusClass"></span>
         </div>
         <div class="wechat-user offline" v-else @click="handleRefreshStatus">
@@ -56,6 +57,16 @@
               <line x1="6" y1="20" x2="6" y2="14"/>
             </svg>
             <span>数据分析</span>
+          </router-link>
+          <router-link to="/log-analysis" class="nav-item" :class="{ 'active': $route.path === '/log-analysis' }">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            <span>日志分析</span>
           </router-link>
         </nav>
         <div class="sidebar-footer">
@@ -113,15 +124,27 @@ const handleRefreshStatus = async () => {
 }
 
 const minimizeWindow = async () => {
-  await appWindow.minimize()
+  try {
+    await appWindow.minimize()
+  } catch (error) {
+    console.error('最小化窗口失败:', error)
+  }
 }
 
 const maximizeWindow = async () => {
-  await appWindow.toggleMaximize()
+  try {
+    await appWindow.toggleMaximize()
+  } catch (error) {
+    console.error('最大化窗口失败:', error)
+  }
 }
 
 const closeWindow = async () => {
-  await appWindow.close()
+  try {
+    await appWindow.close()
+  } catch (error) {
+    console.error('关闭窗口失败:', error)
+  }
 }
 
 onMounted(async () => {
@@ -204,10 +227,16 @@ onMounted(async () => {
 }
 
 .user-name {
-  font-size: 16px;
+  font-size: 14px;
   color: #061b31;
   font-weight: 400;
   letter-spacing: -0.01em;
+}
+
+.user-wechat-id {
+  font-size: 12px;
+  color: #64748d;
+  font-weight: 300;
 }
 
 .user-status {

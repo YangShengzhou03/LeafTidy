@@ -19,17 +19,26 @@
           <el-option label="定时任务" value="定时" />
           <el-option label="循环任务" value="间隔" />
         </el-select>
-
-        <el-select v-model="filterStatus" placeholder="任务状态" clearable>
-          <el-option label="已启用" :value="true" />
-          <el-option label="已禁用" :value="false" />
-        </el-select>
       </div>
 
       <div class="toolbar-right">
-        <el-button type="primary" @click="handleCreateTask">新建任务</el-button>
+        <el-button
+          v-if="!taskStore.isExecuting"
+          type="primary"
+          @click="handleStartExecution"
+        >
+          开始执行
+        </el-button>
+        <el-button
+          v-else
+          type="danger"
+          @click="handleStopExecution"
+        >
+          终止执行
+        </el-button>
+        <el-button @click="handleCreateTask">新建任务</el-button>
         <el-button @click="handleImportExcel">导入配置</el-button>
-        <el-button @click="handleClearAll">清空</el-button>
+        <el-button type="danger" @click="handleClearAll">清空</el-button>
       </div>
     </div>
 
@@ -56,22 +65,37 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="schedule" label="执行时间" width="160">
+        <el-table-column prop="schedule" label="执行时间" width="180">
           <template #default="{ row }">
-            <div v-if="row.type === '定时'">{{ row.executeTime }}</div>
+            <div v-if="row.type === '定时'">{{ formatTime(row.executeTime) }}</div>
             <div v-else>间隔 {{ row.interval }} 分钟</div>
           </template>
         </el-table-column>
 
-        <el-table-column prop="nextExecute" label="下次执行" width="160">
+        <el-table-column prop="nextExecute" label="下次执行" width="180">
           <template #default="{ row }">
-            <div class="text-ellipsis">{{ row.nextExecute }}</div>
+            <div class="text-ellipsis">{{ formatTime(row.nextExecute) }}</div>
           </template>
         </el-table-column>
 
         <el-table-column prop="executeCount" label="执行次数" width="100">
           <template #default="{ row }">
-            {{ row.executeCount }} 次
+            <span class="execute-count">{{ row.executeCount }} 次</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="status" label="任务状态" width="100">
+          <template #default="{ row }">
+            <div class="task-status" :class="row.status">
+              <span class="status-dot"></span>
+              <span class="status-text">{{ getStatusText(row.status) }}</span>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="enabled" label="启用状态" width="100">
+          <template #default="{ row }">
+            <el-switch v-model="row.enabled" @change="handleToggleTask(row)" />
           </template>
         </el-table-column>
 
@@ -125,7 +149,7 @@
           </div>
         </el-form-item>
 
-        <el-form-item v-else label="选择文件" prop="filePath">
+        <el-form-item v-else label="选择文件" prop="fileName">
           <el-input v-model="taskForm.fileName" placeholder="选择要发送的文件">
             <template #append>
               <el-button @click="handleSelectFile">选择文件</el-button>
@@ -238,31 +262,45 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Download, UploadFilled } from '@element-plus/icons-vue'
+import { Search, UploadFilled, Download } from '@element-plus/icons-vue'
+import { useTaskStore, type Task } from '../stores/task'
 
-interface Task {
-  id: number
-  recipient: string
-  content: string
-  contentType: 'text' | 'file'
-  fileName?: string
-  type: '定时' | '间隔'
-  executeTime?: string
-  repeatMode?: string
-  interval?: number
-  weekdays?: string[]
-  executeMode?: string
-  maxExecuteCount?: number
-  nextExecute: string
-  enabled: boolean
-  executeCount: number
-  autoSplit: boolean
-  retryOnFail: boolean
+const taskStore = useTaskStore()
+
+// 格式化时间
+const formatTime = (time: string | undefined) => {
+  if (!time) return '-'
+
+  try {
+    const date = new Date(time)
+    if (isNaN(date.getTime())) return '-'
+
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+
+    return `${year}-${month}-${day} ${hours}:${minutes}`
+  } catch {
+    return '-'
+  }
+}
+
+// 获取状态文本
+const getStatusText = (status: string) => {
+  const statusMap: Record<string, string> = {
+    pending: '待执行',
+    running: '运行中',
+    paused: '已暂停',
+    completed: '已完成',
+    failed: '失败'
+  }
+  return statusMap[status] || status
 }
 
 const searchKeyword = ref('')
 const filterType = ref('')
-const filterStatus = ref<boolean | ''>('')
 const currentPage = ref(1)
 const pageSize = ref(10)
 const selectedTasks = ref<Task[]>([])
@@ -271,12 +309,6 @@ const editingTask = ref<Task | null>(null)
 const importDialogVisible = ref(false)
 const uploadRef = ref()
 const selectedFile = ref<File | null>(null)
-
-const tasks = ref<Task[]>([
-  { id: 1, recipient: '技术部群', content: '各位同事,早会时间到了,请大家准时参加会议。', contentType: 'text', type: '定时', executeTime: '2025-07-20 09:00', repeatMode: '工作日', nextExecute: '2025-07-20 09:00', enabled: true, executeCount: 45, autoSplit: false, retryOnFail: true },
-  { id: 2, recipient: '工作群', content: '请大家记得提交今日工作日报。', contentType: 'text', type: '间隔', interval: 120, nextExecute: '2025-07-19 18:00', enabled: true, executeCount: 128, autoSplit: false, retryOnFail: false },
-  { id: 3, recipient: '张总', content: '', contentType: 'file', fileName: '周报.xlsx', type: '定时', executeTime: '2025-07-21 18:00', repeatMode: '', nextExecute: '2025-07-21 18:00', enabled: false, executeCount: 12, autoSplit: false, retryOnFail: true }
-])
 
 const taskForm = ref({
   recipient: '',
@@ -300,11 +332,10 @@ const taskRules = {
 }
 
 const filteredTasks = computed(() => {
-  return tasks.value.filter(task => {
+  return taskStore.tasks.filter(task => {
     const matchKeyword = !searchKeyword.value || task.recipient.includes(searchKeyword.value)
     const matchType = !filterType.value || task.type === filterType.value
-    const matchStatus = filterStatus.value === '' || task.enabled === filterStatus.value
-    return matchKeyword && matchType && matchStatus
+    return matchKeyword && matchType
   })
 })
 
@@ -312,13 +343,18 @@ const total = computed(() => filteredTasks.value.length)
 
 const handleCreateTask = () => {
   editingTask.value = null
+
+  // 默认执行时间为当前时间+1分钟
+  const defaultExecuteTime = new Date(Date.now() + 60 * 1000)
+  const formattedTime = defaultExecuteTime.toISOString().slice(0, 16) // 格式: YYYY-MM-DDTHH:mm
+
   taskForm.value = {
     recipient: '',
     content: '',
     contentType: 'text',
     fileName: '',
     type: '定时',
-    executeTime: '',
+    executeTime: formattedTime,
     repeatMode: '',
     interval: 30,
     weekdays: [],
@@ -332,7 +368,21 @@ const handleCreateTask = () => {
 
 const handleEditTask = (task: Task) => {
   editingTask.value = task
-  taskForm.value = { ...task }
+  taskForm.value = {
+    recipient: task.recipient,
+    content: task.content,
+    contentType: task.contentType,
+    fileName: task.fileName || '',
+    type: task.type,
+    executeTime: task.executeTime || '',
+    repeatMode: task.repeatMode || '',
+    interval: task.interval || 30,
+    weekdays: task.weekdays || [],
+    executeMode: task.executeMode,
+    maxExecuteCount: task.maxExecuteCount,
+    autoSplit: task.autoSplit,
+    retryOnFail: task.retryOnFail
+  }
   taskDialogVisible.value = true
 }
 
@@ -343,23 +393,17 @@ const handleSaveTask = () => {
   }
 
   if (editingTask.value) {
-    const index = tasks.value.findIndex(t => t.id === editingTask.value!.id)
-    if (index !== -1) {
-      tasks.value[index] = {
-        ...editingTask.value,
-        ...taskForm.value
-      } as Task
-    }
+    taskStore.updateTask(editingTask.value.id, {
+      ...taskForm.value,
+      nextExecute: taskForm.value.executeTime || new Date().toISOString()
+    })
     ElMessage.success('任务更新成功')
   } else {
-    const newTask: Task = {
-      id: Date.now(),
+    taskStore.addTask({
       ...taskForm.value,
       nextExecute: taskForm.value.executeTime || new Date().toISOString(),
-      executeCount: 0,
       enabled: true
-    } as Task
-    tasks.value.push(newTask)
+    })
     ElMessage.success('任务创建成功')
   }
 
@@ -372,20 +416,16 @@ const handleDeleteTask = (task: Task) => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(() => {
-    const index = tasks.value.findIndex(t => t.id === task.id)
-    if (index !== -1) {
-      tasks.value.splice(index, 1)
-      ElMessage.success('任务已删除')
-    }
+    taskStore.deleteTask(task.id)
+    ElMessage.success('任务已删除')
+  }).catch(() => {
+    // 用户取消
   })
 }
 
 const handleToggleTask = (task: Task) => {
+  taskStore.toggleTask(task.id)
   ElMessage.success(task.enabled ? '任务已启用' : '任务已禁用')
-}
-
-const handleExecuteNow = (task: Task) => {
-  ElMessage.success('任务已立即执行')
 }
 
 const handleSelectionChange = (selection: Task[]) => {
@@ -399,13 +439,12 @@ const handleBatchDelete = () => {
     type: 'warning'
   }).then(() => {
     selectedTasks.value.forEach(task => {
-      const index = tasks.value.findIndex(t => t.id === task.id)
-      if (index !== -1) {
-        tasks.value.splice(index, 1)
-      }
+      taskStore.deleteTask(task.id)
     })
     selectedTasks.value = []
     ElMessage.success('批量删除成功')
+  }).catch(() => {
+    // 用户取消
   })
 }
 
@@ -419,7 +458,7 @@ const handleClearAll = () => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(() => {
-    tasks.value = []
+    taskStore.clearAllTasks()
     ElMessage.success('已清空所有任务')
   }).catch(() => {
     // 用户取消
@@ -431,8 +470,31 @@ const handleFileChange = (file: any) => {
 }
 
 const handleDownloadTemplate = () => {
+  const templateContent = `接收对象,发送内容,内容类型,任务类型,执行时间,间隔时间(分钟),执行模式,最大执行次数
+技术部群,早会提醒,text,定时,2025-07-20 09:00,,无限,
+工作群,日报提醒,text,间隔,,30,无限,10`
+
+  const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = '任务导入模板.csv'
+  link.click()
+  URL.revokeObjectURL(link.href)
   ElMessage.success('模板下载成功')
-  // 实际项目中这里应该下载真实的 Excel 模板
+}
+
+const handleStartExecution = async () => {
+  try {
+    taskStore.startExecution()
+    ElMessage.success('开始执行任务')
+  } catch (error: any) {
+    ElMessage.error(error.message || '启动失败')
+  }
+}
+
+const handleStopExecution = () => {
+  taskStore.stopExecution()
+  ElMessage.warning('已停止执行任务')
 }
 
 const handleConfirmImport = () => {
@@ -493,7 +555,6 @@ const handleSelectFile = () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 32px;
-  gap: 16px;
 }
 
 .toolbar-left {
@@ -504,6 +565,7 @@ const handleSelectFile = () => {
 .toolbar-right {
   display: flex;
   gap: 12px;
+  align-items: center;
 }
 
 .table-wrapper {
@@ -561,5 +623,70 @@ const handleSelectFile = () => {
 .download-template {
   margin-top: 24px;
   text-align: center;
+}
+
+.execute-count {
+  font-size: 14px;
+  color: #061b31;
+  font-weight: 400;
+}
+
+.task-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #64748d;
+  flex-shrink: 0;
+}
+
+.task-status.running .status-dot {
+  background: #10b981;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.task-status.completed .status-dot {
+  background: #533afd;
+}
+
+.task-status.failed .status-dot {
+  background: #ef4444;
+}
+
+.task-status.paused .status-dot {
+  background: #64748d;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-text {
+  font-size: 14px;
+  color: #64748d;
+  font-weight: 300;
+}
+
+.task-status.running .status-text {
+  color: #10b981;
+  font-weight: 400;
+}
+
+.task-status.completed .status-text {
+  color: #533afd;
+}
+
+.task-status.failed .status-text {
+  color: #ef4444;
 }
 </style>

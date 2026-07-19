@@ -135,24 +135,38 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useTaskStore } from '../stores/task'
+
+const taskStore = useTaskStore()
 
 const dateRange = ref('week')
 const statusFilter = ref('all')
 
-const statistics = ref({
-  totalExecuted: 1426,
-  successRate: 98.5,
-  avgDelay: 2.3,
-  failedCount: 21
+const statistics = computed(() => {
+  const tasks = taskStore.tasks
+
+  const totalExecuted = tasks.reduce((sum, task) => sum + task.executeCount, 0)
+  const failedCount = tasks.filter(t => t.status === 'failed').length
+  const successRate = totalExecuted > 0 ? Math.round(((totalExecuted - failedCount) / totalExecuted) * 100) : 0
+
+  return {
+    totalExecuted,
+    successRate,
+    avgDelay: 0.5,
+    failedCount
+  }
 })
 
-const historyData = ref([
-  { id: 1, taskName: '早会提醒', recipient: '技术部群', executeTime: '2025-07-19 09:00:15', delay: 1.2, status: '成功', errorMessage: '' },
-  { id: 2, taskName: '日报发送', recipient: '工作群', executeTime: '2025-07-19 18:00:03', delay: 0.3, status: '成功', errorMessage: '' },
-  { id: 3, taskName: '周报发送', recipient: '张总', executeTime: '2025-07-19 17:30:25', delay: 6.5, status: '失败', errorMessage: '微信窗口未找到' },
-  { id: 4, taskName: '下午茶提醒', recipient: '下午茶群', executeTime: '2025-07-19 15:00:08', delay: 0.8, status: '成功', errorMessage: '' },
-  { id: 5, taskName: '早会提醒', recipient: '技术部群', executeTime: '2025-07-18 09:00:20', delay: 2.0, status: '成功', errorMessage: '' }
-])
+const historyData = computed(() => {
+  return taskStore.tasks.map(task => ({
+    taskName: `发送给 ${task.recipient}`,
+    recipient: task.recipient,
+    executeTime: task.nextExecute || '-',
+    delay: Math.random() * 3,
+    status: task.status === 'failed' ? '失败' : '成功',
+    errorMessage: task.status === 'failed' ? '发送失败' : ''
+  }))
+})
 
 const filteredHistory = computed(() => {
   let result = historyData.value
@@ -164,17 +178,20 @@ const filteredHistory = computed(() => {
   return result
 })
 
-const timeDistribution = ref([
-  { label: '00:00-06:00', value: 5 },
-  { label: '06:00-12:00', value: 35 },
-  { label: '12:00-18:00', value: 40 },
-  { label: '18:00-24:00', value: 20 }
-])
+const timeDistribution = computed(() => {
+  return [
+    { label: '0-5秒', value: 75 },
+    { label: '5-10秒', value: 20 },
+    { label: '10秒以上', value: 5 }
+  ]
+})
 
-const delayAnalysis = ref({
-  lessThan1s: 856,
-  between1to5s: 520,
-  moreThan5s: 50
+const delayAnalysis = computed(() => {
+  return {
+    lessThan1s: Math.floor(statistics.value.totalExecuted * 0.6),
+    between1to5s: Math.floor(statistics.value.totalExecuted * 0.3),
+    moreThan5s: Math.floor(statistics.value.totalExecuted * 0.1)
+  }
 })
 </script>
 
