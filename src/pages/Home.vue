@@ -45,28 +45,62 @@
           </button>
         </div>
       </div>
+      <div class="no-task-hint" v-else>
+        <p>暂无待执行任务</p>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
+import { useTaskStore } from '../stores/task'
 
-const statistics = ref({
-  totalTasks: 15,
-  todayExecuted: 128,
-  successRate: 98
-})
+const taskStore = useTaskStore()
 
-const tasks = ref([
-  { id: 1, name: '早会提醒', recipient: '技术部群', type: '定时', nextExecute: '2025-07-20 09:00', enabled: true },
-  { id: 2, name: '日报发送', recipient: '工作群', type: '间隔', nextExecute: '2025-07-19 18:00', enabled: true },
-  { id: 3, name: '下午茶提醒', recipient: '下午茶群', type: '定时', nextExecute: '2025-07-20 15:00', enabled: false }
-])
+// 统计数据从 store 获取
+const statistics = computed(() => ({
+  totalTasks: taskStore.statistics.total,
+  todayExecuted: taskStore.tasks.reduce((sum, t) => sum + t.executeCount, 0),
+  successRate: taskStore.statistics.total > 0
+    ? Math.round((taskStore.statistics.completed / taskStore.statistics.total) * 100)
+    : 0
+}))
 
+// 获取下一个要执行的任务
 const nextTask = computed(() => {
-  return tasks.value.find(task => task.enabled) || tasks.value[0]
+  const now = new Date()
+  const pendingTasks = taskStore.tasks
+    .filter(t => t.enabled && new Date(t.nextExecute) > now)
+    .sort((a, b) => new Date(a.nextExecute).getTime() - new Date(b.nextExecute).getTime())
+
+  const task = pendingTasks[0]
+  if (!task) return null
+
+  return {
+    name: task.content.substring(0, 20) + (task.content.length > 20 ? '...' : ''),
+    recipient: task.recipient,
+    type: task.type,
+    nextExecute: formatTime(task.nextExecute),
+    enabled: task.enabled
+  }
 })
+
+// 格式化时间
+const formatTime = (time: string) => {
+  if (!time) return '-'
+  try {
+    const date = new Date(time)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${year}-${month}-${day} ${hours}:${minutes}`
+  } catch {
+    return '-'
+  }
+}
 </script>
 
 <style scoped>
@@ -237,5 +271,20 @@ const nextTask = computed(() => {
 
 .task-toggle.active .toggle-dot {
   transform: translateX(20px);
+}
+
+.no-task-hint {
+  padding: 48px 32px;
+  background: #ffffff;
+  border: 1px solid #e5edf5;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.no-task-hint p {
+  margin: 0;
+  font-size: 16px;
+  color: #64748d;
+  font-weight: 300;
 }
 </style>

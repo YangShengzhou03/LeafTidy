@@ -74,15 +74,23 @@ pub fn get_wechat_status() -> WeChatStatus {
 
 #[tauri::command]
 pub fn send_message(recipient: String, message: String) -> SendMessageResponse {
+    log_info!("TaskExecutor", "收到发送消息请求: recipient={}, message={}", recipient, message);
+    
     unsafe {
         match send_wechat_message(&recipient, &message) {
-            Ok(_) => SendMessageResponse {
-                success: true,
-                message: format!("已发送给 {}", recipient),
+            Ok(_) => {
+                log_info!("TaskExecutor", "消息发送成功: {}", recipient);
+                SendMessageResponse {
+                    success: true,
+                    message: format!("已发送给 {}", recipient),
+                }
             },
-            Err(e) => SendMessageResponse {
-                success: false,
-                message: format!("发送失败: {:?}", e),
+            Err(e) => {
+                log_error!("TaskExecutor", "消息发送失败: {:?}", e);
+                SendMessageResponse {
+                    success: false,
+                    message: format!("发送失败: {:?}", e),
+                }
             },
         }
     }

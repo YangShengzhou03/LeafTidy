@@ -1,4 +1,4 @@
-use chrono::Local;
+use chrono::{Local, TimeZone};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -76,9 +76,20 @@ pub async fn schedule_task(
     interval: Option<u32>,
     max_execute_count: u32,
 ) -> Result<String, String> {
-    let execute_timestamp = chrono::DateTime::parse_from_str(&execute_time, "%Y-%m-%d %H:%M")
-        .map(|dt| dt.timestamp())
-        .map_err(|e| format!("解析时间失败: {:?}", e))?;
+    // 使用本地时区解析时间字符串
+    let execute_timestamp = if execute_time.contains('T') {
+        // ISO 8601 格式 (带时区)
+        chrono::DateTime::parse_from_rfc3339(&execute_time)
+            .map(|dt| dt.timestamp())
+            .map_err(|e| format!("解析时间失败: {:?}", e))?
+    } else {
+        // 本地时间格式 "YYYY-MM-DD HH:MM"，使用本地时区
+        let naive_dt = chrono::NaiveDateTime::parse_from_str(&execute_time, "%Y-%m-%d %H:%M")
+            .map_err(|e| format!("解析时间失败: {:?}", e))?;
+        Local.from_local_datetime(&naive_dt).single()
+            .map(|dt| dt.timestamp())
+            .ok_or_else(|| "无效的本地时间".to_string())?
+    };
 
     let task = ScheduledTask {
         id,

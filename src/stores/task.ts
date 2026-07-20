@@ -26,6 +26,7 @@ export interface Task {
 export const useTaskStore = defineStore('task', () => {
   const tasks = ref<Task[]>([])
   const isExecuting = ref(false)
+  let executionTimer: ReturnType<typeof setInterval> | null = null
 
   // 从 localStorage 加载数据
   const loadFromStorage = () => {
@@ -54,7 +55,7 @@ export const useTaskStore = defineStore('task', () => {
       ...task,
       id: Date.now(),
       executeCount: 0,
-      status: task.enabled ? 'running' : 'pending'
+      status: 'pending' // 新建任务统一为待执行状态
     }
     tasks.value.push(newTask)
     saveToStorage()
@@ -76,6 +77,11 @@ export const useTaskStore = defineStore('task', () => {
     if (index !== -1) {
       tasks.value.splice(index, 1)
       saveToStorage()
+      
+      // 如果没有任务了，停止执行
+      if (tasks.value.length === 0) {
+        stopExecution()
+      }
     }
   }
 
@@ -84,7 +90,7 @@ export const useTaskStore = defineStore('task', () => {
     const task = tasks.value.find(t => t.id === id)
     if (task) {
       task.enabled = !task.enabled
-      task.status = task.enabled ? 'running' : 'paused'
+      task.status = task.enabled ? 'pending' : 'paused'
       saveToStorage()
     }
   }
@@ -93,6 +99,7 @@ export const useTaskStore = defineStore('task', () => {
   const clearAllTasks = () => {
     tasks.value = []
     saveToStorage()
+    stopExecution() // 清空任务时停止执行
   }
 
   // 开始执行任务
@@ -108,38 +115,57 @@ export const useTaskStore = defineStore('task', () => {
 
     isExecuting.value = true
 
-    // 更新任务状态：启用的任务变为"运行中"，未启用的保持"已停用"
+    // 更新任务状态：启用的任务变为"运行中"
     tasks.value.forEach(task => {
-      if (task.enabled) {
+      if (task.enabled && task.status === 'pending') {
         task.status = 'running'
-      } else {
-        task.status = 'paused'
       }
     })
 
     saveToStorage()
 
+    // 清理旧的定时器
+    if (executionTimer) {
+      clearInterval(executionTimer)
+    }
+
     // 启动定时器检查任务执行时间
-    const checkInterval = setInterval(() => {
+    executionTimer = setInterval(async () => {
       if (!isExecuting.value) {
-        clearInterval(checkInterval)
+        if (executionTimer) {
+          clearInterval(executionTimer)
+          executionTimer = null
+        }
         return
       }
 
       const now = new Date()
-      tasks.value.forEach(async (task) => {
+      
+      for (const task of tasks.value) {
         if (task.enabled && task.status === 'running') {
           const executeTime = new Date(task.nextExecute)
-          if (executeTime <= now && task.executeCount < task.maxExecuteCount) {
-            // 执行任务
+          
+          // 验证时间格式是否有效
+          if (isNaN(executeTime.getTime())) {
+            console.error(`[任务错误] 任务#${task.id} 的执行时间格式错误:`, task.nextExecute)
+            continue
+          }
+          
+          // 只执行执行时间已到且未超过5分钟的任务（避免执行过期太久的任务）
+          const timeDiff = now.getTime() - executeTime.getTime()
+          console.log(`[任务检查] 任务#${task.id} 执行时间: ${executeTime.toLocaleString('zh-CN')}, 当前时间: ${now.toLocaleString('zh-CN')}, 时间差: ${Math.round(timeDiff / 1000)}秒`)
+          
+          if (timeDiff >= 0 && timeDiff < 5 * 60 * 1000 && task.executeCount < task.maxExecuteCount) {
             try {
-              console.log(`执行任务 #${task.id}: 发送 '${task.content}' 给 ${task.recipient}`)
+              console.log(`[任务执行] 开始执行任务 #${task.id}: 发送 '${task.content}' 给 ${task.recipient}`)
 
               // 调用后端API发送微信消息
-              await invoke('send_message', {
+              const result = await invoke('send_message', {
                 recipient: task.recipient,
                 content: task.content
               })
+              
+              console.log(`[任务执行] 后端返回:`, result)
 
               // 更新执行次数
               task.executeCount++
@@ -147,29 +173,29 @@ export const useTaskStore = defineStore('task', () => {
               // 更新下次执行时间
               if (task.type === '间隔' && task.interval) {
                 task.nextExecute = new Date(Date.now() + task.interval * 60 * 1000).toISOString()
-              } else if (task.executeCount >= task.maxExecuteCount) {
+              } else {
+                // 定时任务执行一次后标记为完成
                 task.status = 'completed'
               }
 
               saveToStorage()
+              console.log(`[任务执行] 任务 #${task.id} 执行成功`)
             } catch (error) {
-              console.error('任务执行失败:', error)
+              console.error('[任务执行] 失败:', error)
               task.status = 'failed'
               saveToStorage()
-
-              // 播放失败提示音
               playErrorSound()
             }
           }
         }
-      })
+      }
     }, 1000) // 每秒检查一次
   }
 
   // 播放失败提示音
   const playErrorSound = () => {
     try {
-      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQKSy6upj4WMeH1zblBIRz05NzYzLisqKywtLi8xMzU2ODo8PDw8Ozo4NzUzMS4sKykoKCoqLC0uMDI0Njc5Ozw9PTw7Ojk3NTIwLi0ra2goKScnJygqKywtLi8xMzU2ODs8PT09PDs5NzUzMS8tLCkomainJCMhICAgICEiJCcoKi0uMDI0Njc5Ozw9PT09PDs5NzUzMS8tLCkomainJCMhICAfHx8gISQnKiotLzAyNDY3OTo7PD0+Pj09PDs5NzUzMS8tLCkmainJCMhICAfHh4eICEkJiqqrS8wMjQ2Nzk6Ozw9Pj5/Pz49PTw7OTc1MzEvLSwpJ6enpYyKiYiHhoWFhIiJioyNjo+QkJCQj42Ni4mIh4aFhIKBgYB+fX18e3p5eHd2dXRzcnFwb25tbGtqaWhnZmVkYmJgX15dXFtaWFdWVVRTUlFQT05NTEtKSUhHRkVEQ0JBQT8+PTw7Ojk3NTMxLy0sKScmJSQjISEfHh0cGxoZGBcWFRQTEhEPDg0LCgkIBwYFBAMCAQA=')
+      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQKSy6upj4WMeH1zblBIRz05NzYzLisqKywtLi8xMzU2ODo8PDw8Ozo4NzUzMS4sKykoKCoqLC0uMDI0Njc5Ozw9PTw7Ojk3NTIwLi0ra2goKScnJygqKywtLi8xMzU2ODs8PT09PDs5NzUzMS8tLCkmainJCMhICAgICEiJCcoKi0uMDI0Njc5Ozw9PT09PDs5NzUzMS8tLCkmainJCMhICAfHx8gISQnKiotLzAyNDY3OTo7PD0+Pj09PDs5NzUzMS8tLCkmainJCMhICAfHh4eICEkJiqqrS8wMjQ2Nzk6Ozw9Pj5/Pz49PTw7OTc1MzEvLSwpJ6enpYyKiYiHhoWFhIiJioyNjo+QkJCQj42Ni4mIh4aFhIKBgYB+fX18e3p5eHd2dXRzcnFwb25tbGtqaWhnZmVkYmJgX15dXFtaWFdWVVRTUlFQT05NTEtKSUhHRkVEQ0JBQT8+PTw7Ojk3NTMxLy0sKScmJSQjISEfHh0cGxoZGBcWFRQTEhEPDg0LCgkIBwYFBAMCAQA=')
       audio.volume = 0.5
       audio.play()
     } catch (error) {
@@ -180,6 +206,12 @@ export const useTaskStore = defineStore('task', () => {
   // 停止执行任务
   const stopExecution = () => {
     isExecuting.value = false
+
+    // 清理定时器
+    if (executionTimer) {
+      clearInterval(executionTimer)
+      executionTimer = null
+    }
 
     // 将所有running状态的任务改为paused
     tasks.value.forEach(task => {
@@ -202,6 +234,13 @@ export const useTaskStore = defineStore('task', () => {
 
   // 初始化时加载数据
   loadFromStorage()
+  
+  // 确保初始化时状态正确
+  isExecuting.value = false
+  if (executionTimer) {
+    clearInterval(executionTimer)
+    executionTimer = null
+  }
 
   return {
     tasks,

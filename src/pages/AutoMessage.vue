@@ -316,7 +316,7 @@ const taskForm = ref({
   contentType: 'text' as 'text' | 'file',
   fileName: '',
   type: '定时' as '定时' | '间隔',
-  executeTime: '',
+  executeTime: '' as string | Date,
   repeatMode: '',
   interval: 30,
   weekdays: [] as string[],
@@ -346,7 +346,6 @@ const handleCreateTask = () => {
 
   // 默认执行时间为当前时间+1分钟
   const defaultExecuteTime = new Date(Date.now() + 60 * 1000)
-  const formattedTime = defaultExecuteTime.toISOString().slice(0, 16) // 格式: YYYY-MM-DDTHH:mm
 
   taskForm.value = {
     recipient: '',
@@ -354,7 +353,7 @@ const handleCreateTask = () => {
     contentType: 'text',
     fileName: '',
     type: '定时',
-    executeTime: formattedTime,
+    executeTime: defaultExecuteTime, // 直接使用 Date 对象
     repeatMode: '',
     interval: 30,
     weekdays: [],
@@ -392,16 +391,57 @@ const handleSaveTask = () => {
     return
   }
 
+  // 将执行时间转换为本地时间字符串（避免时区问题）
+  const executeTime = taskForm.value.executeTime
+  let nextExecuteTime: string
+  
+  if (executeTime instanceof Date) {
+    // 使用本地时间格式：YYYY-MM-DDTHH:mm:ss
+    const year = executeTime.getFullYear()
+    const month = String(executeTime.getMonth() + 1).padStart(2, '0')
+    const day = String(executeTime.getDate()).padStart(2, '0')
+    const hours = String(executeTime.getHours()).padStart(2, '0')
+    const minutes = String(executeTime.getMinutes()).padStart(2, '0')
+    const seconds = String(executeTime.getSeconds()).padStart(2, '0')
+    nextExecuteTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
+  } else if (typeof executeTime === 'string' && executeTime) {
+    nextExecuteTime = executeTime
+  } else {
+    // 默认使用当前时间+1分钟
+    const defaultTime = new Date(Date.now() + 60 * 1000)
+    const year = defaultTime.getFullYear()
+    const month = String(defaultTime.getMonth() + 1).padStart(2, '0')
+    const day = String(defaultTime.getDate()).padStart(2, '0')
+    const hours = String(defaultTime.getHours()).padStart(2, '0')
+    const minutes = String(defaultTime.getMinutes()).padStart(2, '0')
+    const seconds = String(defaultTime.getSeconds()).padStart(2, '0')
+    nextExecuteTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
+  }
+
+  // 准备任务数据
+  const taskData = {
+    recipient: taskForm.value.recipient,
+    content: taskForm.value.content,
+    contentType: taskForm.value.contentType,
+    fileName: taskForm.value.fileName,
+    type: taskForm.value.type,
+    executeTime: nextExecuteTime,
+    repeatMode: taskForm.value.repeatMode,
+    interval: taskForm.value.interval,
+    weekdays: taskForm.value.weekdays,
+    executeMode: taskForm.value.executeMode,
+    maxExecuteCount: taskForm.value.maxExecuteCount,
+    autoSplit: taskForm.value.autoSplit,
+    retryOnFail: taskForm.value.retryOnFail,
+    nextExecute: nextExecuteTime
+  }
+
   if (editingTask.value) {
-    taskStore.updateTask(editingTask.value.id, {
-      ...taskForm.value,
-      nextExecute: taskForm.value.executeTime || new Date().toISOString()
-    })
+    taskStore.updateTask(editingTask.value.id, taskData)
     ElMessage.success('任务更新成功')
   } else {
     taskStore.addTask({
-      ...taskForm.value,
-      nextExecute: taskForm.value.executeTime || new Date().toISOString(),
+      ...taskData,
       enabled: true
     })
     ElMessage.success('任务创建成功')
