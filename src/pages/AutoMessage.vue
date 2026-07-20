@@ -48,47 +48,55 @@
 
         <el-table-column prop="recipient" label="接收对象" width="120">
           <template #default="{ row }">
-            <div class="text-ellipsis">{{ row.recipient }}</div>
+            <div class="text-ellipsis" :title="row.recipient">{{ row.recipient }}</div>
           </template>
         </el-table-column>
 
         <el-table-column prop="content" label="发送内容" min-width="200">
           <template #default="{ row }">
             <div v-if="row.contentType === 'text'" class="text-ellipsis" :title="row.content">{{ row.content }}</div>
-            <div v-else class="text-ellipsis">{{ row.fileName }}</div>
+            <div v-else class="text-ellipsis" :title="row.fileName">{{ row.fileName }}</div>
           </template>
         </el-table-column>
 
         <el-table-column prop="type" label="类型" width="100">
           <template #default="{ row }">
-            <span class="task-type-tag">{{ row.type }}</span>
+            <div class="text-ellipsis">
+              <span class="task-type-tag">{{ row.type }}</span>
+            </div>
           </template>
         </el-table-column>
 
         <el-table-column prop="schedule" label="执行时间" width="180">
           <template #default="{ row }">
-            <div v-if="row.type === '定时'">{{ formatTime(row.executeTime) }}</div>
-            <div v-else>间隔 {{ row.interval }} 分钟</div>
+            <div class="text-ellipsis" :title="row.type === '定时' ? formatTime(row.executeTime) : `间隔 ${row.interval} 分钟`">
+              <div v-if="row.type === '定时'">{{ formatTime(row.executeTime) }}</div>
+              <div v-else>间隔 {{ row.interval }} 分钟</div>
+            </div>
           </template>
         </el-table-column>
 
         <el-table-column prop="nextExecute" label="下次执行" width="180">
           <template #default="{ row }">
-            <div class="text-ellipsis">{{ formatTime(row.nextExecute) }}</div>
+            <div class="text-ellipsis" :title="formatTime(row.nextExecute)">{{ formatTime(row.nextExecute) }}</div>
           </template>
         </el-table-column>
 
         <el-table-column prop="executeCount" label="执行次数" width="100">
           <template #default="{ row }">
-            <span class="execute-count">{{ row.executeCount }} 次</span>
+            <div class="text-ellipsis">
+              <span class="execute-count">{{ row.executeCount }} 次</span>
+            </div>
           </template>
         </el-table-column>
 
         <el-table-column prop="status" label="任务状态" width="100">
           <template #default="{ row }">
-            <div class="task-status" :class="row.status">
-              <span class="status-dot"></span>
-              <span class="status-text">{{ getStatusText(row.status) }}</span>
+            <div class="text-ellipsis">
+              <div class="task-status" :class="row.status">
+                <span class="status-dot"></span>
+                <span class="status-text">{{ getStatusText(row.status) }}</span>
+              </div>
             </div>
           </template>
         </el-table-column>
@@ -267,7 +275,6 @@ import { useTaskStore, type Task } from '../stores/task'
 
 const taskStore = useTaskStore()
 
-// 格式化时间
 const formatTime = (time: string | undefined) => {
   if (!time) return '-'
 
@@ -287,7 +294,6 @@ const formatTime = (time: string | undefined) => {
   }
 }
 
-// 获取状态文本
 const getStatusText = (status: string) => {
   const statusMap: Record<string, string> = {
     pending: '待执行',
@@ -344,7 +350,6 @@ const total = computed(() => filteredTasks.value.length)
 const handleCreateTask = () => {
   editingTask.value = null
 
-  // 默认执行时间为当前时间+1分钟
   const defaultExecuteTime = new Date(Date.now() + 60 * 1000)
 
   taskForm.value = {
@@ -353,7 +358,7 @@ const handleCreateTask = () => {
     contentType: 'text',
     fileName: '',
     type: '定时',
-    executeTime: defaultExecuteTime, // 直接使用 Date 对象
+    executeTime: defaultExecuteTime,
     repeatMode: '',
     interval: 30,
     weekdays: [],
@@ -391,12 +396,10 @@ const handleSaveTask = () => {
     return
   }
 
-  // 将执行时间转换为本地时间字符串（避免时区问题）
   const executeTime = taskForm.value.executeTime
   let nextExecuteTime: string
-  
+
   if (executeTime instanceof Date) {
-    // 使用本地时间格式：YYYY-MM-DDTHH:mm:ss
     const year = executeTime.getFullYear()
     const month = String(executeTime.getMonth() + 1).padStart(2, '0')
     const day = String(executeTime.getDate()).padStart(2, '0')
@@ -407,7 +410,6 @@ const handleSaveTask = () => {
   } else if (typeof executeTime === 'string' && executeTime) {
     nextExecuteTime = executeTime
   } else {
-    // 默认使用当前时间+1分钟
     const defaultTime = new Date(Date.now() + 60 * 1000)
     const year = defaultTime.getFullYear()
     const month = String(defaultTime.getMonth() + 1).padStart(2, '0')
@@ -418,7 +420,6 @@ const handleSaveTask = () => {
     nextExecuteTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
   }
 
-  // 准备任务数据
   const taskData = {
     recipient: taskForm.value.recipient,
     content: taskForm.value.content,
@@ -459,12 +460,12 @@ const handleDeleteTask = (task: Task) => {
     taskStore.deleteTask(task.id)
     ElMessage.success('任务已删除')
   }).catch(() => {
-    // 用户取消
   })
 }
 
 const handleToggleTask = (task: Task) => {
-  taskStore.toggleTask(task.id)
+  task.status = task.enabled ? 'pending' : 'paused'
+  taskStore.saveToStorage()
   ElMessage.success(task.enabled ? '任务已启用' : '任务已禁用')
 }
 
@@ -484,7 +485,6 @@ const handleBatchDelete = () => {
     selectedTasks.value = []
     ElMessage.success('批量删除成功')
   }).catch(() => {
-    // 用户取消
   })
 }
 
@@ -501,7 +501,6 @@ const handleClearAll = () => {
     taskStore.clearAllTasks()
     ElMessage.success('已清空所有任务')
   }).catch(() => {
-    // 用户取消
   })
 }
 
@@ -543,7 +542,6 @@ const handleConfirmImport = () => {
     return
   }
 
-  // 实际项目中这里应该解析 Excel 文件并导入数据
   ElMessage.success('导入成功')
   importDialogVisible.value = false
   selectedFile.value = null

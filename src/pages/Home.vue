@@ -33,9 +33,9 @@
       <div class="task-list" v-if="nextTask">
         <div class="task-item">
           <div class="task-info">
-            <div class="task-name">{{ nextTask.name }}</div>
+            <div class="task-name">发送给 {{ nextTask.recipient }}</div>
             <div class="task-meta">
-              <span class="task-recipient">{{ nextTask.recipient }}</span>
+              <span class="task-recipient">{{ nextTask.content }}</span>
               <span class="task-type" :class="nextTask.type">{{ nextTask.type }}</span>
             </div>
           </div>
@@ -58,35 +58,6 @@ import { useTaskStore } from '../stores/task'
 
 const taskStore = useTaskStore()
 
-// 统计数据从 store 获取
-const statistics = computed(() => ({
-  totalTasks: taskStore.statistics.total,
-  todayExecuted: taskStore.tasks.reduce((sum, t) => sum + t.executeCount, 0),
-  successRate: taskStore.statistics.total > 0
-    ? Math.round((taskStore.statistics.completed / taskStore.statistics.total) * 100)
-    : 0
-}))
-
-// 获取下一个要执行的任务
-const nextTask = computed(() => {
-  const now = new Date()
-  const pendingTasks = taskStore.tasks
-    .filter(t => t.enabled && new Date(t.nextExecute) > now)
-    .sort((a, b) => new Date(a.nextExecute).getTime() - new Date(b.nextExecute).getTime())
-
-  const task = pendingTasks[0]
-  if (!task) return null
-
-  return {
-    name: task.content.substring(0, 20) + (task.content.length > 20 ? '...' : ''),
-    recipient: task.recipient,
-    type: task.type,
-    nextExecute: formatTime(task.nextExecute),
-    enabled: task.enabled
-  }
-})
-
-// 格式化时间
 const formatTime = (time: string) => {
   if (!time) return '-'
   try {
@@ -101,6 +72,32 @@ const formatTime = (time: string) => {
     return '-'
   }
 }
+
+const statistics = computed(() => ({
+  totalTasks: taskStore.statistics.total,
+  todayExecuted: taskStore.tasks.reduce((sum, t) => sum + t.executeCount, 0),
+  successRate: taskStore.statistics.total > 0
+    ? Math.round((taskStore.statistics.completed / taskStore.statistics.total) * 100)
+    : 0
+}))
+
+const nextTask = computed(() => {
+  const now = new Date()
+  const pendingTasks = taskStore.tasks
+    .filter(t => t.enabled && new Date(t.nextExecute) > now)
+    .sort((a, b) => new Date(a.nextExecute).getTime() - new Date(b.nextExecute).getTime())
+
+  const task = pendingTasks[0]
+  if (!task) return null
+
+  return {
+    content: task.content,
+    recipient: task.recipient,
+    type: task.type,
+    nextExecute: formatTime(task.nextExecute),
+    enabled: task.enabled
+  }
+})
 </script>
 
 <style scoped>

@@ -198,6 +198,19 @@ pub async fn delete_all_logs() -> Result<(), String> {
     LOGGER.delete_all_logs().map_err(|e| e.to_string())
 }
 
+// 前端日志记录API
+#[tauri::command]
+pub async fn log_frontend(level: String, module: String, message: String) -> Result<(), String> {
+    match level.to_uppercase().as_str() {
+        "INFO" => LOGGER.info(&module, &message),
+        "WARN" => LOGGER.warn(&module, &message),
+        "ERROR" => LOGGER.error(&module, &message),
+        "DEBUG" => LOGGER.debug(&module, &message),
+        _ => LOGGER.info(&module, &message),
+    }
+    Ok(())
+}
+
 // 全局日志实例
 lazy_static::lazy_static! {
     pub static ref LOGGER: Logger = Logger::new();

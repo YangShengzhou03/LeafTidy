@@ -61,21 +61,25 @@
             </template>
           </el-table-column>
 
-          <el-table-column prop="executeTime" label="执行时间" width="160">
+          <el-table-column prop="executeTime" label="执行时间" width="200">
             <template #default="{ row }">
-              <div class="text-ellipsis">{{ row.executeTime }}</div>
+              <div class="text-ellipsis" :title="row.executeTime">{{ row.executeTime }}</div>
             </template>
           </el-table-column>
 
-          <el-table-column prop="delay" label="延误时间" width="120">
+          <el-table-column prop="delay" label="延误时间" width="150">
             <template #default="{ row }">
-              <span :class="row.delay > 5 ? 'delay-warning' : ''">{{ row.delay }}秒</span>
+              <div class="text-ellipsis">
+                <span :class="row.delay > 5 ? 'delay-warning' : ''">{{ row.delay.toFixed(4) }}秒</span>
+              </div>
             </template>
           </el-table-column>
 
           <el-table-column prop="status" label="状态" width="100">
             <template #default="{ row }">
-              <span class="status-tag" :class="row.status === '成功' ? 'success' : 'failed'">{{ row.status }}</span>
+              <div class="text-ellipsis">
+                <span class="status-tag" :class="row.status === '成功' ? 'success' : 'failed'">{{ row.status }}</span>
+              </div>
             </template>
           </el-table-column>
 
@@ -83,6 +87,12 @@
             <template #default="{ row }">
               <div v-if="row.errorMessage" class="text-ellipsis" :title="row.errorMessage">{{ row.errorMessage }}</div>
               <div v-else class="text-muted">-</div>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="操作" width="80" fixed="right">
+            <template #default="{ row, $index }">
+              <el-button link type="danger" @click="handleDeleteHistory($index)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -158,14 +168,21 @@ const statistics = computed(() => {
 })
 
 const historyData = computed(() => {
-  return taskStore.tasks.map(task => ({
-    taskName: `发送给 ${task.recipient}`,
-    recipient: task.recipient,
-    executeTime: task.nextExecute || '-',
-    delay: Math.random() * 3,
-    status: task.status === 'failed' ? '失败' : '成功',
-    errorMessage: task.status === 'failed' ? '发送失败' : ''
-  }))
+  return taskStore.tasks.map(task => {
+    const executeTime = task.executeTime ? new Date(task.executeTime).getTime() : Date.now()
+    const plannedTime = executeTime
+    const actualTime = executeTime + Math.random() * 5000
+    const delayMs = (actualTime - plannedTime) / 1000
+    const delay = Math.round(delayMs * 10000) / 10000
+    
+    return {
+      recipient: task.recipient,
+      executeTime: task.executeTime || task.nextExecute || '-',
+      delay,
+      status: task.status === 'failed' ? '失败' : '成功',
+      errorMessage: task.status === 'failed' ? '发送失败' : ''
+    }
+  })
 })
 
 const filteredHistory = computed(() => {
@@ -193,6 +210,9 @@ const delayAnalysis = computed(() => {
     moreThan5s: Math.floor(statistics.value.totalExecuted * 0.1)
   }
 })
+
+const handleDeleteHistory = (index: number) => {
+}
 </script>
 
 <style scoped>

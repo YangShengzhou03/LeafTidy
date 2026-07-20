@@ -41,6 +41,7 @@ fn main() {
             leafmaster::logger::read_log_file,
             leafmaster::logger::delete_log_file,
             leafmaster::logger::delete_all_logs,
+            leafmaster::logger::log_frontend,
         ])
         .run(tauri::generate_context!())
         .expect("启动失败");

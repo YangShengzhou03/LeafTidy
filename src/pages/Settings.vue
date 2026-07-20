@@ -324,7 +324,6 @@ const systemSettings = ref({
   cleanTime: new Date(2025, 0, 1, 3, 0, 0)
 })
 
-// 从 localStorage 加载设置
 const loadSettings = () => {
   try {
     const saved = localStorage.getItem('leafmaster_settings')
@@ -340,7 +339,6 @@ const loadSettings = () => {
   }
 }
 
-// 保存设置到 localStorage
 const saveSettings = () => {
   try {
     const data = {
@@ -456,7 +454,6 @@ const handleRestoreData = () => {
       const text = await file.text()
       const backupData = JSON.parse(text)
 
-      // 恢复设置
       if (backupData.settings) {
         basicSettings.value = { ...basicSettings.value, ...backupData.settings.basic }
         wechatSettings.value = { ...wechatSettings.value, ...backupData.settings.wechat }
@@ -465,7 +462,6 @@ const handleRestoreData = () => {
         saveSettings()
       }
 
-      // 恢复任务
       if (backupData.tasks) {
         localStorage.setItem('leafmaster_tasks', JSON.stringify(backupData.tasks))
       }

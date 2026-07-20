@@ -35,7 +35,6 @@ export const useWeChatStore = defineStore('wechat', () => {
     loading.value = true
     try {
       const result = await invoke<WeChatStatus>('get_wechat_status')
-      // 保留本地维护的 task_running 状态
       const currentTaskRunning = status.value.task_running
       status.value = {
         ...result,

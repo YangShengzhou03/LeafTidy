@@ -3,7 +3,8 @@ import Home from '@/pages/Home.vue'
 import AutoMessage from '@/pages/AutoMessage.vue'
 import Settings from '@/pages/Settings.vue'
 import DataAnalysis from '@/pages/DataAnalysis.vue'
-import LogAnalysis from '@/pages/LogAnalysis.vue'
+import LogFiles from '@/pages/LogFiles.vue'
+import LogViewer from '@/pages/LogViewer.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -21,8 +22,12 @@ const router = createRouter({
       component: DataAnalysis
     },
     {
-      path: '/log-analysis',
-      component: LogAnalysis
+      path: '/log-files',
+      component: LogFiles
+    },
+    {
+      path: '/log-viewer',
+      component: LogViewer
     },
     {
       path: '/settings',

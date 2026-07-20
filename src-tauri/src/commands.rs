@@ -49,11 +49,15 @@ pub fn get_wechat_status() -> WeChatStatus {
     unsafe {
         match detect_wechat() {
             Ok((username, wechat_id)) => {
-                log_info!("WeChat", "微信已连接: {} ({})", username, wechat_id);
+                if wechat_id.is_empty() {
+                    log_info!("WeChat", "微信已连接: {}", username);
+                } else {
+                    log_info!("WeChat", "微信已连接: {} ({})", username, wechat_id);
+                }
                 WeChatStatus {
                     online: true,
                     username: Some(username.clone()),
-                    wechat_id: Some(wechat_id.clone()),
+                    wechat_id: if wechat_id.is_empty() { None } else { Some(wechat_id.clone()) },
                     login_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
                     task_running: false,
                 }
@@ -111,8 +115,6 @@ pub fn send_file(recipient: String, filepath: String) -> SendFileResponse {
         }
     }
 }
-
-// ============ 微信检测 ============
 
 unsafe fn detect_wechat() -> Result<(String, String)> {
     let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
@@ -203,8 +205,6 @@ unsafe fn get_nickname_from_profile(automation: &IUIAutomation, root: &IUIAutoma
     Err(Error::from(E_FAIL))
 }
 
-// ============ 发送消息与文件 ============
-
 unsafe fn send_wechat_message(recipient: &str, message: &str) -> Result<()> {
     let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
 
@@ -240,33 +240,27 @@ unsafe fn send_wechat_file(recipient: &str, filepath: &str) -> Result<()> {
     paste_to_chat_input(&automation, &window)?;
     let result = click_send_button(&automation, &window);
 
-    // 发送完成后立即清空剪贴板，避免污染用户使用
     clear_clipboard();
 
     result
 }
-
-// ============ 三级优先级定位联系人 ============
 
 unsafe fn locate_contact_and_enter_chat(
     automation: &IUIAutomation,
     window: &IUIAutomationElement,
     recipient: &str,
 ) -> Result<()> {
-    // 优先级 1：当前聊天窗口已是目标联系人
     if let Ok(current_title) = get_current_chat_title(automation, window) {
         if current_title == recipient {
             return Ok(());
         }
     }
 
-    // 优先级 2：在会话列表中查找
     if let Ok(true) = find_and_click_in_session_list(automation, window, recipient) {
         std::thread::sleep(DEFAULT_DELAY);
         return Ok(());
     }
 
-    // 优先级 3：搜索联系人
     search_and_click_contact(automation, window, recipient)?;
     std::thread::sleep(DEFAULT_DELAY);
     Ok(())
@@ -285,7 +279,6 @@ unsafe fn get_current_chat_title(automation: &IUIAutomation, window: &IUIAutomat
     Ok(clean_trailing_count(&name))
 }
 
-// 去除末尾的 (数字) 后缀，如 "群名(5)" -> "群名"
 fn clean_trailing_count(s: &str) -> String {
     let s = s.trim();
     if let Some(open_idx) = s.rfind('(') {
@@ -408,9 +401,6 @@ unsafe fn search_and_click_contact(
     Err(Error::from(E_FAIL))
 }
 
-// ============ 发送内容 ============
-
-// 通过 ValuePattern 直接设置控件内容（不污染剪贴板）
 unsafe fn set_chat_input_value(
     automation: &IUIAutomation,
     window: &IUIAutomationElement,
@@ -450,8 +440,6 @@ unsafe fn click_send_button(automation: &IUIAutomation, window: &IUIAutomationEl
     Ok(())
 }
 
-// ============ 文件发送 ============
-
 unsafe fn set_clipboard_file(path: &Path) -> Result<()> {
     let absolute_path = path.canonicalize()?;
     let path_str = absolute_path.to_string_lossy().replace("\\", "\\\\");
@@ -487,7 +475,6 @@ unsafe fn set_clipboard_file(path: &Path) -> Result<()> {
     Ok(())
 }
 
-// 清空剪贴板，避免污染用户使用
 unsafe fn clear_clipboard() {
     if OpenClipboard(None).is_ok() {
         let _ = EmptyClipboard();
@@ -511,8 +498,6 @@ unsafe fn paste_to_chat_input(automation: &IUIAutomation, window: &IUIAutomation
     std::thread::sleep(DEFAULT_DELAY);
     Ok(())
 }
-
-// ============ 通用辅助函数 ============
 
 unsafe fn locate_wechat_window(automation: &IUIAutomation, root: &IUIAutomationElement) -> Result<IUIAutomationElement> {
     let window = find_first_by(
