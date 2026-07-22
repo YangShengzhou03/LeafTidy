@@ -272,37 +272,13 @@ import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, UploadFilled, Download } from '@element-plus/icons-vue'
 import { useTaskStore, type Task } from '../stores/task'
+import { formatTime } from '../utils/time'
+import { getStateText, TaskState } from '../utils/taskStateMachine'
 
 const taskStore = useTaskStore()
 
-const formatTime = (time: string | undefined) => {
-  if (!time) return '-'
-
-  try {
-    const date = new Date(time)
-    if (isNaN(date.getTime())) return '-'
-
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-
-    return `${year}-${month}-${day} ${hours}:${minutes}`
-  } catch {
-    return '-'
-  }
-}
-
-const getStatusText = (status: string) => {
-  const statusMap: Record<string, string> = {
-    pending: '待执行',
-    running: '运行中',
-    paused: '已暂停',
-    completed: '已完成',
-    failed: '失败'
-  }
-  return statusMap[status] || status
+const getStatusText = (status: TaskState) => {
+  return getStateText(status)
 }
 
 const searchKeyword = ref('')
@@ -390,80 +366,62 @@ const handleEditTask = (task: Task) => {
   taskDialogVisible.value = true
 }
 
-const handleSaveTask = () => {
+const handleSaveTask = async () => {
   if (!taskForm.value.recipient) {
     ElMessage.warning('请填写完整信息')
     return
   }
 
   const executeTime = taskForm.value.executeTime
-  let nextExecuteTime: string
-
-  if (executeTime instanceof Date) {
-    const year = executeTime.getFullYear()
-    const month = String(executeTime.getMonth() + 1).padStart(2, '0')
-    const day = String(executeTime.getDate()).padStart(2, '0')
-    const hours = String(executeTime.getHours()).padStart(2, '0')
-    const minutes = String(executeTime.getMinutes()).padStart(2, '0')
-    const seconds = String(executeTime.getSeconds()).padStart(2, '0')
-    nextExecuteTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
-  } else if (typeof executeTime === 'string' && executeTime) {
-    nextExecuteTime = executeTime
-  } else {
-    const defaultTime = new Date(Date.now() + 60 * 1000)
-    const year = defaultTime.getFullYear()
-    const month = String(defaultTime.getMonth() + 1).padStart(2, '0')
-    const day = String(defaultTime.getDate()).padStart(2, '0')
-    const hours = String(defaultTime.getHours()).padStart(2, '0')
-    const minutes = String(defaultTime.getMinutes()).padStart(2, '0')
-    const seconds = String(defaultTime.getSeconds()).padStart(2, '0')
-    nextExecuteTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
-  }
-
+  // 直接传递 Date 对象或 ISO 字符串，让 taskStore.addTask 统一处理
   const taskData = {
     recipient: taskForm.value.recipient,
     content: taskForm.value.content,
     contentType: taskForm.value.contentType,
     fileName: taskForm.value.fileName,
     type: taskForm.value.type,
-    executeTime: nextExecuteTime,
+    executeTime: executeTime instanceof Date ? executeTime : (executeTime || new Date(Date.now() + 60 * 1000)),
     repeatMode: taskForm.value.repeatMode,
     interval: taskForm.value.interval,
     weekdays: taskForm.value.weekdays,
     executeMode: taskForm.value.executeMode,
     maxExecuteCount: taskForm.value.maxExecuteCount,
     autoSplit: taskForm.value.autoSplit,
-    retryOnFail: taskForm.value.retryOnFail,
-    nextExecute: nextExecuteTime
+    retryOnFail: taskForm.value.retryOnFail
   }
 
-  if (editingTask.value) {
-    taskStore.updateTask(editingTask.value.id, taskData)
-    ElMessage.success('任务更新成功')
-  } else {
-    taskStore.addTask({
-      ...taskData,
-      enabled: true
+  try {
+    if (editingTask.value) {
+      await taskStore.updateTask(editingTask.value.id, taskData)
+      ElMessage.success('任务更新成功')
+    } else {
+      await taskStore.addTask({
+        ...taskData,
+        enabled: true
+      })
+      ElMessage.success('任务创建成功')
+    }
+    taskDialogVisible.value = false
+  } catch (error: any) {
+    ElMessage.error(error?.message || '操作失败')
+  }
+}
+
+const handleDeleteTask = async (task: Task) => {
+  try {
+    await ElMessageBox.confirm('确定要删除该任务吗?', '确认删除', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
     })
-    ElMessage.success('任务创建成功')
-  }
-
-  taskDialogVisible.value = false
-}
-
-const handleDeleteTask = (task: Task) => {
-  ElMessageBox.confirm('确定要删除该任务吗?', '确认删除', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    taskStore.deleteTask(task.id)
+    await taskStore.deleteTask(task.id)
     ElMessage.success('任务已删除')
-  }).catch(() => {
-  })
+  } catch {
+    // 用户取消
+  }
 }
 
-const handleToggleTask = (task: Task) => {
+const handleToggleTask = async (task: Task) => {
   task.status = task.enabled ? 'pending' : 'paused'
   taskStore.saveToStorage()
   ElMessage.success(task.enabled ? '任务已启用' : '任务已禁用')
@@ -473,35 +431,40 @@ const handleSelectionChange = (selection: Task[]) => {
   selectedTasks.value = selection
 }
 
-const handleBatchDelete = () => {
-  ElMessageBox.confirm(`确定要删除选中的 ${selectedTasks.value.length} 个任务吗?`, '确认删除', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    selectedTasks.value.forEach(task => {
-      taskStore.deleteTask(task.id)
+const handleBatchDelete = async () => {
+  try {
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedTasks.value.length} 个任务吗?`, '确认删除', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
     })
+
+    for (const task of selectedTasks.value) {
+      await taskStore.deleteTask(task.id)
+    }
     selectedTasks.value = []
     ElMessage.success('批量删除成功')
-  }).catch(() => {
-  })
+  } catch {
+    // 用户取消
+  }
 }
 
 const handleImportExcel = () => {
   importDialogVisible.value = true
 }
 
-const handleClearAll = () => {
-  ElMessageBox.confirm('确定要清空所有任务吗？此操作不可恢复！', '确认清空', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    taskStore.clearAllTasks()
+const handleClearAll = async () => {
+  try {
+    await ElMessageBox.confirm('确定要清空所有任务吗？此操作不可恢复！', '确认清空', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await taskStore.clearAllTasks()
     ElMessage.success('已清空所有任务')
-  }).catch(() => {
-  })
+  } catch {
+    // 用户取消
+  }
 }
 
 const handleFileChange = (file: any) => {
@@ -523,8 +486,20 @@ const handleDownloadTemplate = () => {
 }
 
 const handleStartExecution = async () => {
+  // 先检查是否有任务
+  if (taskStore.tasks.length === 0) {
+    ElMessage.warning('没有可执行的任务，请先添加任务')
+    return
+  }
+
+  const enabledTasks = taskStore.tasks.filter(t => t.enabled)
+  if (enabledTasks.length === 0) {
+    ElMessage.warning('没有启用的任务，请先启用任务')
+    return
+  }
+
   try {
-    taskStore.startExecution()
+    await taskStore.startExecution()
     ElMessage.success('开始执行任务')
   } catch (error: any) {
     ElMessage.error(error.message || '启动失败')

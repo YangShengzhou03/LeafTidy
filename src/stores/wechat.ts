@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { ErrorCode, ErrorHandler, safeExecute } from '../utils/errorHandler'
 
 export interface WeChatStatus {
   online: boolean
@@ -33,15 +34,15 @@ export const useWeChatStore = defineStore('wechat', () => {
 
   async function checkStatus() {
     loading.value = true
-    try {
-      const result = await invoke<WeChatStatus>('get_wechat_status')
-      const currentTaskRunning = status.value.task_running
-      status.value = {
-        ...result,
-        task_running: currentTaskRunning
-      }
-    } catch (error) {
-      console.error('检查微信状态失败:', error)
+    const result = await safeExecute(
+      () => invoke<WeChatStatus>('get_wechat_status'),
+      (error) => ErrorHandler.create(ErrorCode.WECHAT_NOT_RUNNING, '检查微信状态失败', error)
+    )
+
+    if (result.success && result.data) {
+      status.value = result.data
+    } else {
+      console.error('检查微信状态失败:', result.error)
       status.value = {
         online: false,
         username: null,
@@ -49,9 +50,9 @@ export const useWeChatStore = defineStore('wechat', () => {
         login_time: null,
         task_running: false
       }
-    } finally {
-      loading.value = false
     }
+
+    loading.value = false
   }
 
   function setTaskRunning(running: boolean) {
@@ -59,29 +60,25 @@ export const useWeChatStore = defineStore('wechat', () => {
   }
 
   async function sendMessage(recipient: string, message: string): Promise<SendMessageResult> {
-    try {
-      const result = await invoke<SendMessageResult>('send_message', { recipient, message })
-      return result
-    } catch (error) {
-      console.error('发送消息失败:', error)
-      return {
-        success: false,
-        message: String(error)
-      }
-    }
+    const result = await safeExecute(
+      () => invoke<SendMessageResult>('send_message', { recipient, message }),
+      (error) => ErrorHandler.create(ErrorCode.WECHAT_SEND_FAILED, '发送消息失败', error)
+    )
+
+    return result.success && result.data
+      ? result.data
+      : { success: false, message: result.error?.message || '未知错误' }
   }
 
   async function sendFile(recipient: string, filepath: string): Promise<SendFileResult> {
-    try {
-      const result = await invoke<SendFileResult>('send_file', { recipient, filepath })
-      return result
-    } catch (error) {
-      console.error('发送文件失败:', error)
-      return {
-        success: false,
-        message: String(error)
-      }
-    }
+    const result = await safeExecute(
+      () => invoke<SendFileResult>('send_file', { recipient, filepath }),
+      (error) => ErrorHandler.create(ErrorCode.WECHAT_SEND_FAILED, '发送文件失败', error)
+    )
+
+    return result.success && result.data
+      ? result.data
+      : { success: false, message: result.error?.message || '未知错误' }
   }
 
   return {

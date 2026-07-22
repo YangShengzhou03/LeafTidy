@@ -9,24 +9,9 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|_app| {
-            // 启动任务调度器后台线程
-            std::thread::spawn(|| {
-                loop {
-                    std::thread::sleep(std::time::Duration::from_secs(1));
-
-                    let pending_tasks = SCHEDULER.get_pending_tasks();
-
-                    for task in pending_tasks {
-                        log_info!("TaskExecutor", "执行任务 #{}: 发送 '{}' 给 {}",
-                            task.id, task.content, task.recipient);
-
-                        // TODO: 调用微信API发送消息
-                        // 这里需要实现微信消息发送逻辑
-
-                        SCHEDULER.increment_execute_count(task.id);
-                    }
-                }
-            });
+            // 问题 H1 修复：启动后台任务执行循环
+            leafmaster::task_executor::SCHEDULER.start_execution_loop();
+            log_info!("TauriMain", "应用已启动，任务调度器已启动");
 
             Ok(())
         })

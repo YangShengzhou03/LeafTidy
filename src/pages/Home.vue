@@ -55,23 +55,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useTaskStore } from '../stores/task'
+import { formatTime } from '../utils/time'
 
 const taskStore = useTaskStore()
-
-const formatTime = (time: string) => {
-  if (!time) return '-'
-  try {
-    const date = new Date(time)
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    return `${year}-${month}-${day} ${hours}:${minutes}`
-  } catch {
-    return '-'
-  }
-}
 
 const statistics = computed(() => ({
   totalTasks: taskStore.statistics.total,

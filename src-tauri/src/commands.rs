@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::sync::Mutex;
 use windows::{
     core::*,
     Win32::{
@@ -20,6 +21,41 @@ use windows::{
 
 const DEFAULT_DELAY: std::time::Duration = std::time::Duration::from_millis(500);
 const SHORT_DELAY: std::time::Duration = std::time::Duration::from_millis(100);
+
+// 问题12修复：支持多版本微信窗口类名
+const WECHAT_WINDOW_CLASSES: &[&str] = &[
+    "mmui::MainWindow",      // 当前版本
+    "WeChatMainWndForPC",    // 可能的新版本
+];
+
+// 问题 M4 修复：剪贴板操作锁，确保线程安全
+lazy_static::lazy_static! {
+    pub static ref CLIPBOARD_LOCK: Mutex<()> = Mutex::new(());
+}
+
+// 问题5修复：COM初始化RAII包装器
+struct ComGuard {
+    initialized: bool,
+}
+
+impl ComGuard {
+    unsafe fn new() -> Self {
+        let result = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+        ComGuard {
+            initialized: result.is_ok()
+        }
+    }
+}
+
+impl Drop for ComGuard {
+    fn drop(&mut self) {
+        if self.initialized {
+            unsafe {
+                CoUninitialize();
+            }
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WeChatStatus {
@@ -79,7 +115,21 @@ pub fn get_wechat_status() -> WeChatStatus {
 #[tauri::command]
 pub fn send_message(recipient: String, message: String) -> SendMessageResponse {
     log_info!("TaskExecutor", "收到发送消息请求: recipient={}, message={}", recipient, message);
-    
+
+    // 问题11修复：参数验证
+    if recipient.trim().is_empty() {
+        return SendMessageResponse {
+            success: false,
+            message: "收件人不能为空".to_string(),
+        };
+    }
+    if message.trim().is_empty() {
+        return SendMessageResponse {
+            success: false,
+            message: "消息内容不能为空".to_string(),
+        };
+    }
+
     unsafe {
         match send_wechat_message(&recipient, &message) {
             Ok(_) => {
@@ -102,8 +152,110 @@ pub fn send_message(recipient: String, message: String) -> SendMessageResponse {
 
 #[tauri::command]
 pub fn send_file(recipient: String, filepath: String) -> SendFileResponse {
+    // 参数验证
+    if recipient.trim().is_empty() {
+        return SendFileResponse {
+            success: false,
+            message: "收件人不能为空".to_string(),
+        };
+    }
+    if filepath.trim().is_empty() {
+        return SendFileResponse {
+            success: false,
+            message: "文件路径不能为空".to_string(),
+        };
+    }
+
+    // 问题10修复：路径安全验证
+    // H4 增强：更严格的文件路径验证
+    let path = Path::new(&filepath);
+
+    // 1. 检查文件是否存在
+    if !path.exists() {
+        return SendFileResponse {
+            success: false,
+            message: "文件不存在".to_string(),
+        };
+    }
+
+    // 2. 获取绝对路径并解析所有符号链接
+    let absolute_path = match std::fs::canonicalize(path) {
+        Ok(p) => p,
+        Err(e) => {
+            return SendFileResponse {
+                success: false,
+                message: format!("无效的文件路径: {:?}", e),
+            };
+        }
+    };
+
+    // 3. H4 修复：检查是否为符号链接，拒绝符号链接文件
+    let original_metadata = match std::fs::symlink_metadata(path) {
+        Ok(meta) => meta,
+        Err(e) => {
+            return SendFileResponse {
+                success: false,
+                message: format!("无法获取文件元数据: {:?}", e),
+            };
+        }
+    };
+
+    if original_metadata.file_type().is_symlink() {
+        log_warn!("Security", "拒绝符号链接文件: {:?}", absolute_path);
+        return SendFileResponse {
+            success: false,
+            message: "不允许发送符号链接文件".to_string(),
+        };
+    }
+
+    // 4. H4 修复：检查文件类型（只允许常规文件）
+    let metadata = match std::fs::metadata(&absolute_path) {
+        Ok(meta) => meta,
+        Err(e) => {
+            return SendFileResponse {
+                success: false,
+                message: format!("无法访问文件: {:?}", e),
+            };
+        }
+    };
+
+    if !metadata.is_file() {
+        return SendFileResponse {
+            success: false,
+            message: "只允许发送常规文件".to_string(),
+        };
+    }
+
+    // 5. 白名单检查
+    let allowed_dirs = [
+        dirs::document_dir().unwrap_or_default(),
+        dirs::download_dir().unwrap_or_default(),
+        dirs::desktop_dir().unwrap_or_default(),
+        dirs::home_dir().unwrap_or_default(),
+    ];
+
+    let is_allowed = allowed_dirs.iter().any(|dir| {
+        absolute_path.starts_with(dir)
+    });
+
+    if !is_allowed {
+        log_warn!("Security", "拒绝访问路径外的文件: {:?}", absolute_path);
+        return SendFileResponse {
+            success: false,
+            message: "文件路径不在允许的目录内".to_string(),
+        };
+    }
+
+    // 6. 检查文件大小（限制100MB）
+    if metadata.len() > 100 * 1024 * 1024 {
+        return SendFileResponse {
+            success: false,
+            message: "文件大小超过限制(100MB)".to_string(),
+        };
+    }
+
     unsafe {
-        match send_wechat_file(&recipient, &filepath) {
+        match send_wechat_file(&recipient, &absolute_path.to_string_lossy()) {
             Ok(_) => SendFileResponse {
                 success: true,
                 message: format!("文件已发送给 {}", recipient),
@@ -117,7 +269,8 @@ pub fn send_file(recipient: String, filepath: String) -> SendFileResponse {
 }
 
 unsafe fn detect_wechat() -> Result<(String, String)> {
-    let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+    // 问题5修复：使用ComGuard自动管理COM生命周期
+    let _com = ComGuard::new();
 
     let automation: IUIAutomation = CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER)?;
     let root = automation.GetRootElement()?;
@@ -131,8 +284,15 @@ unsafe fn detect_wechat() -> Result<(String, String)> {
             e
         })?;
 
-    log_info!("WeChat", "微信已连接: {}", username);
-    Ok((username, String::new()))
+    // 问题16修复：集成微信号获取功能
+    let wechat_id = crate::commands_wechat_id::get_wechat_id(&automation, &window)
+        .unwrap_or_else(|e| {
+            log_warn!("WeChat", "获取微信号失败: {:?}", e);
+            String::new()
+        });
+
+    log_info!("WeChat", "微信已连接: {} ({})", username, wechat_id);
+    Ok((username, wechat_id))
 }
 
 unsafe fn get_avatar_username(automation: &IUIAutomation, window: &IUIAutomationElement) -> Result<String> {
@@ -205,8 +365,8 @@ unsafe fn get_nickname_from_profile(automation: &IUIAutomation, root: &IUIAutoma
     Err(Error::from(E_FAIL))
 }
 
-unsafe fn send_wechat_message(recipient: &str, message: &str) -> Result<()> {
-    let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+pub(crate) unsafe fn send_wechat_message(recipient: &str, message: &str) -> Result<()> {
+    let _com = ComGuard::new();
 
     let automation: IUIAutomation = CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER)?;
     let root = automation.GetRootElement()?;
@@ -220,13 +380,13 @@ unsafe fn send_wechat_message(recipient: &str, message: &str) -> Result<()> {
     click_send_button(&automation, &window)
 }
 
-unsafe fn send_wechat_file(recipient: &str, filepath: &str) -> Result<()> {
+pub(crate) unsafe fn send_wechat_file(recipient: &str, filepath: &str) -> Result<()> {
     let path = Path::new(filepath);
     if !path.exists() {
         return Err(Error::from(E_FAIL));
     }
 
-    let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+    let _com = ComGuard::new();
 
     let automation: IUIAutomation = CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER)?;
     let root = automation.GetRootElement()?;
@@ -377,22 +537,27 @@ unsafe fn search_and_click_contact(
         let cell = cells.GetElement(i)?;
         let name = cell.CurrentName()?.to_string();
 
+        // 问题8修复：提前过滤空名称，减少不必要的处理
         if name.trim().is_empty() {
             continue;
         }
 
+        // 更新当前分组
         if valid_groups.contains(&name.as_str()) || skip_groups.contains(&name.as_str()) {
             current_group = name;
             continue;
         }
 
+        // 问题8修复：提前判断是否应该跳过，避免不必要的字符串比较
         if skip_groups.contains(&current_group.as_str()) {
             continue;
         }
 
+        // 问题8修复：找到匹配项后立即返回，不再遍历
         if valid_groups.contains(&current_group.as_str()) && name == recipient {
             click_element_center(&cell)?;
             std::thread::sleep(std::time::Duration::from_millis(300));
+            log_info!("WeChat", "找到并点击联系人: {}", recipient);
             return Ok(());
         }
     }
@@ -441,6 +606,9 @@ unsafe fn click_send_button(automation: &IUIAutomation, window: &IUIAutomationEl
 }
 
 unsafe fn set_clipboard_file(path: &Path) -> Result<()> {
+    // 问题 M4 修复：获取剪贴板锁，确保线程安全
+    let _clipboard_guard = CLIPBOARD_LOCK.lock().unwrap();
+
     let absolute_path = path.canonicalize()?;
     let path_str = absolute_path.to_string_lossy().replace("\\", "\\\\");
 
@@ -456,30 +624,61 @@ unsafe fn set_clipboard_file(path: &Path) -> Result<()> {
         dropfiles_data.push(byte);
     }
 
-    if OpenClipboard(None).is_ok() {
-        let _ = EmptyClipboard();
-
-        let hmem = GlobalAlloc(GLOBAL_ALLOC_FLAGS(0x0002), dropfiles_data.len())?;
-        if !hmem.is_invalid() {
-            let ptr = GlobalLock(hmem);
-            if !ptr.is_null() {
-                std::ptr::copy_nonoverlapping(dropfiles_data.as_ptr(), ptr as *mut u8, dropfiles_data.len());
-                let _ = GlobalUnlock(hmem);
-                let _ = SetClipboardData(0x000F, HANDLE(hmem.0));
-            }
-        }
-        let _ = CloseClipboard();
+    // 问题4修复：改进剪贴板错误处理
+    if OpenClipboard(None).is_err() {
+        return Err(Error::from(E_FAIL));
     }
 
+    let _ = EmptyClipboard();
+
+    // 问题4修复：分配内存，失败时清理
+    let hmem = match GlobalAlloc(GLOBAL_ALLOC_FLAGS(0x0002), dropfiles_data.len()) {
+        Ok(h) => h,
+        Err(e) => {
+            let _ = CloseClipboard();
+            return Err(e);
+        }
+    };
+
+    if hmem.is_invalid() {
+        let _ = CloseClipboard();
+        return Err(Error::from(E_FAIL));
+    }
+
+    // 问题8修复：改进 GlobalLock 错误处理
+    let ptr = GlobalLock(hmem);
+    if ptr.is_null() {
+        // 问题4修复：锁失败时释放内存
+        let _ = GlobalFree(hmem);
+        let _ = CloseClipboard();
+        return Err(Error::from(E_FAIL));
+    }
+
+    std::ptr::copy_nonoverlapping(dropfiles_data.as_ptr(), ptr as *mut u8, dropfiles_data.len());
+    let _ = GlobalUnlock(hmem);
+
+    // 问题4修复：SetClipboardData 失败时释放内存
+    if SetClipboardData(0x000F, HANDLE(hmem.0)).is_err() {
+        let _ = GlobalFree(hmem);
+        let _ = CloseClipboard();
+        return Err(Error::from(E_FAIL));
+    }
+
+    let _ = CloseClipboard();
     std::thread::sleep(SHORT_DELAY);
+    // 锁会在函数返回时自动释放
     Ok(())
 }
 
 unsafe fn clear_clipboard() {
+    // 问题 M4 修复：获取剪贴板锁
+    let _clipboard_guard = CLIPBOARD_LOCK.lock().unwrap();
+
     if OpenClipboard(None).is_ok() {
         let _ = EmptyClipboard();
         let _ = CloseClipboard();
     }
+    // 锁会在函数返回时自动释放
 }
 
 unsafe fn paste_to_chat_input(automation: &IUIAutomation, window: &IUIAutomationElement) -> Result<()> {
@@ -499,20 +698,26 @@ unsafe fn paste_to_chat_input(automation: &IUIAutomation, window: &IUIAutomation
     Ok(())
 }
 
+// 问题12修复：支持多版本微信窗口类名
 unsafe fn locate_wechat_window(automation: &IUIAutomation, root: &IUIAutomationElement) -> Result<IUIAutomationElement> {
-    let window = find_first_by(
-        automation,
-        root,
-        TreeScope_Children,
-        UIA_ClassNamePropertyId,
-        "mmui::MainWindow",
-    )?;
-
-    if window.CurrentClassName()?.is_empty() {
-        return Err(Error::from(E_FAIL));
+    // 尝试所有可能的窗口类名
+    for class_name in WECHAT_WINDOW_CLASSES {
+        if let Ok(window) = find_first_by(
+            automation,
+            root,
+            TreeScope_Children,
+            UIA_ClassNamePropertyId,
+            class_name,
+        ) {
+            if !window.CurrentClassName()?.is_empty() {
+                log_info!("WeChat", "找到微信窗口，类名: {}", class_name);
+                return Ok(window);
+            }
+        }
     }
 
-    Ok(window)
+    log_error!("WeChat", "未找到微信窗口，尝试的类名: {:?}", WECHAT_WINDOW_CLASSES);
+    Err(Error::from(E_FAIL))
 }
 
 // 激活微信窗口并居中显示，确保发送按钮等控件在可见区域内
@@ -540,9 +745,11 @@ unsafe fn activate_wechat_window(window: &IUIAutomationElement) -> Result<()> {
 }
 
 // 把窗口移到屏幕中央（保留原大小）
+// 问题10修复：改进错误处理
 unsafe fn center_window_on_screen(hwnd: HWND) {
     let mut rect = RECT::default();
     if GetWindowRect(hwnd, &mut rect).is_err() {
+        log_warn!("WeChat", "获取窗口矩形失败");
         return;
     }
 
@@ -560,7 +767,12 @@ unsafe fn center_window_on_screen(hwnd: HWND) {
         let work_h = mi.rcWork.bottom - mi.rcWork.top;
         let new_x = mi.rcWork.left + (work_w - win_w) / 2;
         let new_y = mi.rcWork.top + (work_h - win_h) / 2;
-        let _ = SetWindowPos(hwnd, HWND_TOP, new_x, new_y, win_w, win_h, SWP_SHOWWINDOW);
+
+        if SetWindowPos(hwnd, HWND_TOP, new_x, new_y, win_w, win_h, SWP_SHOWWINDOW).is_err() {
+            log_warn!("WeChat", "设置窗口位置失败");
+        }
+    } else {
+        log_warn!("WeChat", "获取显示器信息失败");
     }
 }
 
@@ -583,7 +795,7 @@ unsafe fn click_point(x: i32, y: i32) {
     std::thread::sleep(SHORT_DELAY);
 }
 
-unsafe fn find_first_by(
+pub unsafe fn find_first_by(
     automation: &IUIAutomation,
     parent: &IUIAutomationElement,
     scope: TreeScope,

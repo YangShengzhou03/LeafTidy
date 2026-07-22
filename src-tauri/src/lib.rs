@@ -5,6 +5,7 @@ extern crate lazy_static;
 pub mod logger;
 
 pub mod commands;
+pub mod commands_wechat_id;
 pub mod task_executor;
 
 pub use commands::*;

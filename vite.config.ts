@@ -10,6 +10,10 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // 添加这部分的 watch 配置，解决文件锁定冲突
+    watch: {
+      ignored: ['**/src-tauri/target/**']
+    }
   },
 
   // Env variables starting with TAURI_ are exposed to the client

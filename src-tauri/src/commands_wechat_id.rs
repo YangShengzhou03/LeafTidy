@@ -1,8 +1,21 @@
-unsafe fn get_wechat_id(automation: &IUIAutomation, window: &IUIAutomationElement) -> Result<String> {
+use windows::{
+    core::*,
+    Win32::{Foundation::E_FAIL, UI::Accessibility::*},
+};
+
+/// 获取微信用户的微信号
+/// 
+/// # 参数
+/// - automation: UI Automation接口
+/// - window: 微信窗口元素
+/// 
+/// # 返回
+/// 成功返回微信号，失败返回错误
+pub unsafe fn get_wechat_id(automation: &IUIAutomation, window: &IUIAutomationElement) -> Result<String> {
     log_debug!("WeChat", "尝试获取微信号");
 
     // 方法1: 通过AutomationId查找 ProfileTextView
-    if let Ok(profile_text) = find_first_by(
+    if let Ok(profile_text) = crate::commands::find_first_by(
         automation,
         window,
         TreeScope_Descendants,
@@ -19,7 +32,7 @@ unsafe fn get_wechat_id(automation: &IUIAutomation, window: &IUIAutomationElemen
     }
 
     // 方法2: 查找微信号旁边的文本（"微信号："标签）
-    if let Ok(wechat_label) = find_first_by(
+    if let Ok(wechat_label) = crate::commands::find_first_by(
         automation,
         window,
         TreeScope_Descendants,
@@ -28,7 +41,7 @@ unsafe fn get_wechat_id(automation: &IUIAutomation, window: &IUIAutomationElemen
     ) {
         // 微信号在"微信号："标签的下一个兄弟元素
         let true_condition = automation.CreateTrueCondition()?;
-        if let Ok(parent) = wechat_label.GetCurrentPatternAs::<IUIAutomationLegacyIAccessiblePattern>(UIA_LegacyIAccessiblePatternId) {
+        if let Ok(_parent) = wechat_label.GetCurrentPatternAs::<IUIAutomationLegacyIAccessiblePattern>(UIA_LegacyIAccessiblePatternId) {
             // 尝试查找相邻的文本元素
             if let Ok(siblings) = window.FindAll(TreeScope_Descendants, &true_condition) {
                 let mut found_label = false;

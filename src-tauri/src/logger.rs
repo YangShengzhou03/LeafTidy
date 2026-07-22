@@ -1,4 +1,5 @@
 use chrono::Local;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
@@ -18,6 +19,8 @@ pub struct LogFile {
 pub struct Logger {
     log_dir: PathBuf,
     current_file: Mutex<Option<PathBuf>>,
+    // 问题6修复：添加写入锁，防止并发写入冲突
+    write_lock: Mutex<()>,
 }
 
 impl Logger {
@@ -32,17 +35,65 @@ impl Logger {
         Logger {
             log_dir,
             current_file: Mutex::new(None),
+            write_lock: Mutex::new(()),
         }
     }
 
+    // 问题9修复：敏感信息脱敏函数
+    fn sanitize_sensitive_info(&self, message: &str) -> String {
+        let mut sanitized = message.to_string();
+
+        // 脱敏手机号（中国大陆手机号）
+        let phone_regex = Regex::new(r"1[3-9]\d{9}").unwrap();
+        sanitized = phone_regex
+            .replace_all(&sanitized, "1**********")
+            .to_string();
+
+        // 脱敏微信号（wxid_开头的微信号）
+        let wechat_regex = Regex::new(r"wxid_[a-zA-Z0-9_-]+").unwrap();
+        sanitized = wechat_regex
+            .replace_all(&sanitized, "wxid_****")
+            .to_string();
+
+        // 脱敏邮箱地址
+        let email_regex = Regex::new(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}").unwrap();
+        sanitized = email_regex
+            .replace_all(&sanitized, "***@***.***")
+            .to_string();
+
+        // 脱敏身份证号
+        let id_card_regex = Regex::new(r"\d{17}[\dXx]").unwrap();
+        sanitized = id_card_regex
+            .replace_all(&sanitized, "****************")
+            .to_string();
+
+        // 脱敏银行卡号（16-19位连续数字）
+        let bank_card_regex = Regex::new(r"\d{16,19}").unwrap();
+        sanitized = bank_card_regex
+            .replace_all(&sanitized, "****************")
+            .to_string();
+
+        sanitized
+    }
+
     pub fn log(&self, level: &str, module: &str, message: &str) {
+        // 问题9修复：脱敏敏感信息
+        let sanitized_message = self.sanitize_sensitive_info(message);
+
         let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
-        let log_entry = format!("[{}] [{}] [{}] {}\n", timestamp, level, module, message);
+        let log_entry = format!("[{}] [{}] [{}] {}\n", timestamp, level, module, sanitized_message);
 
-        // 打印到控制台
-        print!("{}", log_entry);
+        // 打印到控制台（原始信息，仅开发时可见）
+        if cfg!(debug_assertions) {
+            print!("[{}] [{}] [{}] {}\n", timestamp, level, module, message);
+        } else {
+            print!("{}", log_entry);
+        }
 
-        // 写入文件
+        // 问题6修复：使用写入锁保护文件操作
+        let _write_guard = self.write_lock.lock().unwrap();
+
+        // 写入文件（脱敏后的内容）
         if let Ok(mut current_file) = self.current_file.lock() {
             // 检查是否需要更新日志文件（每天一个文件）
             let today_file = self.get_current_log_file();

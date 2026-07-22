@@ -1,0 +1,28 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "默认能力配置，启用窗口操作和必要权限",
+  "windows": ["main"],
+  "permissions": [
+    "core:window:default",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-size",
+    "core:window:allow-set-position",
+    "core:window:allow-set-title",
+    "core:window:allow-is-maximized",
+    "core:window:allow-is-minimized",
+    "core:window:allow-inner-size",
+    "core:window:allow-inner-position",
+    "core:window:allow-outer-size",
+    "core:window:allow-outer-position",
+    "core:app:default",
+    "core:event:default",
+    "core:path:default",
+    "shell:allow-open"
+  ]
+}
