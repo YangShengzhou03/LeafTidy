@@ -1,16 +1,16 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2>附属文件清理</h2>
-      <p class="desc">清理系统生成的缩略图、临时文件等垃圾文件</p>
+      <h2>{{ t('cleanup.title') }}</h2>
+      <p class="desc">{{ t('cleanup.desc') }}</p>
     </div>
     <div class="page-content">
       <div class="config-panel">
         <div class="config-item">
-          <label>清理类型</label>
+          <label>{{ t('cleanup.types') }}</label>
           <el-checkbox-group v-model="cleanupTypes">
-            <el-checkbox value="thumbnail">缩略图缓存</el-checkbox>
-            <el-checkbox value="temp">临时文件</el-checkbox>
+            <el-checkbox value="thumbnail">{{ t('cleanup.typeThumbnail') }}</el-checkbox>
+            <el-checkbox value="temp">{{ t('cleanup.typeTemp') }}</el-checkbox>
             <el-checkbox value="ds_store">.DS_Store</el-checkbox>
             <el-checkbox value="thumbs">Thumbs.db</el-checkbox>
             <el-checkbox value="desktop.ini">desktop.ini</el-checkbox>
@@ -21,16 +21,16 @@
       <!-- 扫描进度 -->
       <div class="progress-panel" v-if="scanning">
         <div class="progress-header">
-          <span class="progress-title">正在扫描文件</span>
+          <span class="progress-title">{{ t('cleanup.scanning') }}</span>
           <span class="progress-percent">{{ scanProgress.percentage.toFixed(1) }}%</span>
         </div>
         <el-progress :percentage="scanProgress.percentage" :stroke-width="12" :show-text="false" class="progress-bar" />
         <div class="progress-stats">
-          <span>总数: {{ scanProgress.total }}</span>
-          <span>已扫描: {{ scanProgress.processed }}</span>
+          <span>{{ t('cleanup.total') }} {{ scanProgress.total }}</span>
+          <span>{{ t('cleanup.scanned') }} {{ scanProgress.processed }}</span>
         </div>
         <div class="progress-current" v-if="scanProgress.current_item">
-          <span class="current-label">当前:</span>
+          <span class="current-label">{{ t('cleanup.current') }}</span>
           <span class="current-file">{{ scanProgress.current_item }}</span>
         </div>
       </div>
@@ -38,36 +38,36 @@
       <!-- 清理进度 -->
       <div class="progress-panel" v-if="cleaning">
         <div class="progress-header">
-          <span class="progress-title">正在清理文件</span>
+          <span class="progress-title">{{ t('cleanup.cleaning') }}</span>
           <span class="progress-percent">{{ cleanProgress.percentage.toFixed(1) }}%</span>
         </div>
         <el-progress :percentage="cleanProgress.percentage" :stroke-width="12" :show-text="false"
           class="progress-bar" />
         <div class="progress-stats">
-          <span>总数: {{ cleanProgress.total }}</span>
-          <span>已清理: {{ cleanProgress.processed }}</span>
+          <span>{{ t('cleanup.total') }} {{ cleanProgress.total }}</span>
+          <span>{{ t('cleanup.cleaned') }} {{ cleanProgress.processed }}</span>
         </div>
       </div>
 
       <div class="action-bar">
         <el-button v-if="!scanning && !cleaning" type="primary"
           :disabled="cleanupTypes.length === 0 || workDirs.length === 0" @click="startScan">
-          开始扫描
+          {{ t('cleanup.startScan') }}
         </el-button>
         <el-button v-if="scanning || cleaning" type="danger" @click="stopOperation">
-          {{ scanning ? '终止扫描' : '终止清理' }}
+          {{ scanning ? t('cleanup.stopScan') : t('cleanup.stopClean') }}
         </el-button>
       </div>
       <div class="result-panel" v-if="scanResults.length > 0">
         <div class="result-header">
-          <span class="result-title">扫描结果</span>
+          <span class="result-title">{{ t('cleanup.resultTitle') }}</span>
           <span class="result-stats">
-            共发现 {{ totalFiles }} 个文件，占用 {{ formatSize(totalSize) }}
+            {{ t('cleanup.resultStats', { n: totalFiles, size: formatSize(totalSize) }) }}
           </span>
         </div>
         <div class="result-section" v-for="result in scanResults" :key="result.cleanup_type">
           <div class="section-label">
-            <span>{{ getCleanupTypeLabel(result.cleanup_type) }} - {{ result.files.length }} 个文件 - {{
+            <span>{{ getCleanupTypeLabel(result.cleanup_type) }} - {{ t('cleanup.fileCount', { n: result.files.length }) }} - {{
               formatSize(result.total_size) }}</span>
           </div>
           <div class="result-list">
@@ -80,7 +80,7 @@
         </div>
         <div class="batch-action" v-if="selectedFiles.length > 0">
           <el-button type="danger" :disabled="cleaning" @click="cleanSelected">
-            清理选中的 {{ selectedFiles.length }} 个文件
+            {{ t('cleanup.cleanSelectedBtn', { n: selectedFiles.length }) }}
           </el-button>
         </div>
       </div>
@@ -90,9 +90,10 @@
 
 <script setup lang="ts">
 import { ref, computed, inject, type Ref, onMounted, onUnmounted } from 'vue'
-import { ElMessage, ElNotification } from 'element-plus'
+import { ElNotification } from 'element-plus'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { t } from '@/i18n'
 import { useFileOps } from '@/composables/useFileOps'
 import { useLog, type FileResult } from '@/composables/useLog'
 import type { WorkDirectory, CleanupResult, BatchOperationResult, TaskProgress, CancelResult } from '@/types'
@@ -123,16 +124,15 @@ const cleanProgress = ref<TaskProgress>({
 let unlistenScanProgress: UnlistenFn | null = null
 let unlistenCleanProgress: UnlistenFn | null = null
 
-const cleanupTypeLabels: Record<string, string> = {
-  thumbnail: '缩略图缓存',
-  temp: '临时文件',
-  ds_store: '.DS_Store',
-  thumbs: 'Thumbs.db',
-  'desktop.ini': 'desktop.ini',
-}
-
 function getCleanupTypeLabel(type: string): string {
-  return cleanupTypeLabels[type] || type
+  switch (type) {
+    case 'thumbnail': return t('cleanup.typeThumbnail')
+    case 'temp': return t('cleanup.typeTemp')
+    case 'ds_store': return '.DS_Store'
+    case 'thumbs': return 'Thumbs.db'
+    case 'desktop.ini': return 'desktop.ini'
+    default: return type
+  }
 }
 
 const totalFiles = computed(() => {
@@ -164,19 +164,19 @@ onUnmounted(() => {
 async function stopOperation() {
   try {
     await invoke<CancelResult>('cancel_operation')
-    ElNotification({ type: 'info', title: '提示', message: '正在终止操作...' })
+    ElNotification({ type: 'info', title: t('cleanup.tip'), message: t('cleanup.stopping') })
   } catch (e: any) {
-    ElNotification({ type: 'error', title: '错误', message: `终止失败: ${e}` })
+    ElNotification({ type: 'error', title: t('cleanup.error'), message: t('cleanup.stopFailed', { e }) })
   }
 }
 
 async function startScan() {
   if (cleanupTypes.value.length === 0) {
-    ElNotification({ type: 'warning', title: '警告', message: '请选择清理类型' })
+    ElNotification({ type: 'warning', title: t('cleanup.warning'), message: t('cleanup.selectTypeFirst') })
     return
   }
   if (workDirs.value.length === 0) {
-    ElNotification({ type: 'warning', title: '警告', message: '请先选择待处理目录' })
+    ElNotification({ type: 'warning', title: t('cleanup.warning'), message: t('cleanup.selectDirFirst') })
     return
   }
 
@@ -199,18 +199,18 @@ async function startScan() {
     scanResults.value = res
 
     if (res.length === 0 || totalFiles.value === 0) {
-      ElNotification({ type: 'success', title: '成功', message: '没有发现需要清理的文件' })
+      ElNotification({ type: 'success', title: t('cleanup.success'), message: t('cleanup.nothingFound') })
     } else {
-      ElNotification({ type: 'success', title: '成功', message: `发现 ${totalFiles.value} 个附属文件` })
+      ElNotification({ type: 'success', title: t('cleanup.success'), message: t('cleanup.foundCount', { n: totalFiles.value }) })
     }
   } catch (e: any) {
     const errMsg = String(e)
     if (errMsg.includes('取消')) {
       const pathsStr = workDirs.value.map(d => d.path).join(', ')
       await logCancelledOperation('cleanup', pathsStr, '扫描附属文件 - 用户终止')
-      ElNotification({ type: 'info', title: '提示', message: '扫描操作已取消' })
+      ElNotification({ type: 'info', title: t('cleanup.tip'), message: t('cleanup.scanCancelled') })
     } else {
-      ElNotification({ type: 'error', title: '错误', message: `扫描失败: ${errMsg}` })
+      ElNotification({ type: 'error', title: t('cleanup.error'), message: t('cleanup.scanFailed', { e: errMsg }) })
     }
   } finally {
     scanning.value = false
@@ -241,20 +241,20 @@ async function cleanSelected() {
     await logCleanupResults(results)
 
     if (res.success_count > 0) {
-      ElNotification({ type: 'success', title: '成功', message: `已清理 ${res.success_count} 个文件` })
+      ElNotification({ type: 'success', title: t('cleanup.success'), message: t('cleanup.cleanedCount', { n: res.success_count }) })
       selectedFiles.value = []
       await startScan()
     }
     if (res.fail_count > 0) {
-      ElNotification({ type: 'warning', title: '警告', message: `${res.fail_count} 个文件清理失败` })
+      ElNotification({ type: 'warning', title: t('cleanup.warning'), message: t('cleanup.cleanFailCount', { n: res.fail_count }) })
     }
   } catch (e: any) {
     const errMsg = String(e)
     if (errMsg.includes('取消')) {
       await logCancelledOperation('cleanup', selectedFiles.value.join(', '), '清理附属文件 - 用户终止')
-      ElNotification({ type: 'info', title: '提示', message: '清理操作已取消' })
+      ElNotification({ type: 'info', title: t('cleanup.tip'), message: t('cleanup.cleanCancelled') })
     } else {
-      ElNotification({ type: 'error', title: '错误', message: `清理失败: ${errMsg}` })
+      ElNotification({ type: 'error', title: t('cleanup.error'), message: t('cleanup.cleanFailed', { e: errMsg }) })
     }
   } finally {
     cleaning.value = false
@@ -265,7 +265,7 @@ async function cleanSelected() {
 <style scoped>
 .page-container {
   height: 100%;
-  background: #18191C;
+  background: var(--bg);
   padding: 24px;
   overflow-y: auto;
 }
@@ -277,17 +277,17 @@ async function cleanSelected() {
 .page-header h2 {
   font-size: 16px;
   font-weight: 500;
-  color: #E0E6ED;
+  color: var(--text);
   margin-bottom: 6px;
 }
 
 .page-header .desc {
   font-size: 13px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .config-panel {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
@@ -304,7 +304,7 @@ async function cleanSelected() {
 .config-item label {
   display: block;
   font-size: 13px;
-  color: #C8D0DC;
+  color: var(--text-secondary);
   margin-bottom: 8px;
   font-weight: 500;
 }
@@ -316,7 +316,7 @@ async function cleanSelected() {
 }
 
 .progress-panel {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
@@ -332,13 +332,13 @@ async function cleanSelected() {
 .progress-title {
   font-size: 14px;
   font-weight: 500;
-  color: #E0E6ED;
+  color: var(--text);
 }
 
 .progress-percent {
   font-size: 16px;
   font-weight: 600;
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 .progress-bar {
@@ -349,7 +349,7 @@ async function cleanSelected() {
   display: flex;
   gap: 16px;
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .progress-current {
@@ -358,19 +358,19 @@ async function cleanSelected() {
   gap: 8px;
   margin-top: 12px;
   padding: 8px 12px;
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 6px;
 }
 
 .current-label {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
 .current-file {
   font-size: 12px;
-  color: #E0E6ED;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -383,7 +383,7 @@ async function cleanSelected() {
 }
 
 .result-panel {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   padding: 16px;
 }
@@ -398,12 +398,12 @@ async function cleanSelected() {
 .result-title {
   font-size: 13px;
   font-weight: 500;
-  color: #C8D0DC;
+  color: var(--text-secondary);
 }
 
 .result-stats {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .result-section {
@@ -416,7 +416,7 @@ async function cleanSelected() {
 
 .section-label {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
   margin-bottom: 8px;
 }
 
@@ -433,14 +433,14 @@ async function cleanSelected() {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 6px;
 }
 
 .file-name {
   flex: 1;
   font-size: 12px;
-  color: #E0E6ED;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -452,12 +452,12 @@ async function cleanSelected() {
 }
 
 .file-name.clickable:hover {
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 .file-size {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .batch-action {
@@ -465,6 +465,6 @@ async function cleanSelected() {
   justify-content: flex-end;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #2A2B30;
+  border-top: 1px solid var(--panel-2);
 }
 </style>

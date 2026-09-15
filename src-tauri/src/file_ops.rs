@@ -17,53 +17,6 @@ pub fn system_time_to_string(time: SystemTime) -> String {
         .unwrap_or_else(|| "unknown".to_string())
 }
 
-pub fn list_directory(path_str: &str) -> Result<Vec<FileEntry>, String> {
-    let path = Path::new(path_str);
-    if !path.is_dir() {
-        return Err(format!("路径不是有效目录: {}", path_str));
-    }
-
-    let mut entries = Vec::new();
-    let mut dir = fs::read_dir(path).map_err(|e| format!("读取目录失败: {}", e))?;
-
-    while let Some(entry) = dir.next() {
-        let entry = entry.map_err(|e| format!("读取目录项失败: {}", e))?;
-        let metadata = entry.metadata().map_err(|e| format!("获取元数据失败: {}", e))?;
-
-        let name = entry.file_name().to_string_lossy().to_string();
-        let path_buf = entry.path();
-        let path_str = path_buf.to_string_lossy().to_string();
-        let is_dir = metadata.is_dir();
-        let size = if is_dir { 0 } else { metadata.len() };
-
-        let modified = metadata.modified().ok().map(system_time_to_string).unwrap_or_else(|| "unknown".to_string());
-        let created = metadata.created().ok().map(system_time_to_string).unwrap_or_else(|| "unknown".to_string());
-
-        let format = if is_dir {
-            "folder".to_string()
-        } else {
-            match path_buf.extension() {
-                Some(ext) => ext.to_string_lossy().to_lowercase(),
-                None => "unknown".to_string(),
-            }
-        };
-
-        entries.push(FileEntry {
-            name,
-            path: path_str,
-            is_dir,
-            size,
-            format,
-            modified,
-            created,
-        });
-    }
-
-    entries.sort_by(|a, b| b.is_dir.cmp(&a.is_dir).then(a.name.cmp(&b.name)));
-
-    Ok(entries)
-}
-
 pub fn scan_directory(path: &PathBuf) -> Result<Vec<FileEntry>, String> {
     let mut entries = Vec::new();
 
@@ -172,126 +125,6 @@ pub fn get_directory_stats(paths: Vec<String>) -> Result<DirectoryStats, String>
     })
 }
 
-pub fn list_subdirs(path_str: &str) -> Result<Vec<DirEntry>, String> {
-    let path = Path::new(path_str);
-
-    if path_str.is_empty() || path_str == "/" || path_str == "\\" {
-        return list_root_directories();
-    }
-    
-    if !path.is_dir() {
-        return Err(format!("路径不是有效目录: {}", path_str));
-    }
-
-    let mut entries = Vec::new();
-    let dir = fs::read_dir(path).map_err(|e| format!("读取目录失败: {}", e))?;
-
-    for entry in dir {
-        let entry = entry.map_err(|e| format!("读取目录项失败: {}", e))?;
-        let entry_path = entry.path();
-        let name = entry.file_name().to_string_lossy().to_string();
-
-        if name.starts_with('.') || name.starts_with('$') {
-            continue;
-        }
-
-        if entry_path.is_dir() {
-            entries.push(DirEntry {
-                name,
-                path: entry_path.to_string_lossy().to_string(),
-                is_dir: true,
-                children: None,
-            });
-        }
-    }
-
-    entries.sort_by(|a, b| a.name.cmp(&b.name));
-
-    Ok(entries)
-}
-
-fn list_root_directories() -> Result<Vec<DirEntry>, String> {
-    let mut entries = Vec::new();
-
-    for letter in 'A'..'Z' {
-        let drive_path = format!("{}:\\", letter);
-        if Path::new(&drive_path).exists() {
-            entries.push(DirEntry {
-                name: format!("本地磁盘 ({})", letter),
-                path: drive_path,
-                is_dir: true,
-                children: None,
-            });
-        }
-    }
-    
-    Ok(entries)
-}
-
-pub fn rename_file(source: &str, new_name: &str) -> Result<String, String> {
-    let source_path = Path::new(source);
-    if !source_path.exists() {
-        return Err(format!("文件不存在: {}", source));
-    }
-
-    let parent = source_path.parent().ok_or("无法获取父目录")?;
-    let target_path = parent.join(new_name);
-
-    if target_path.exists() {
-        return Err(format!("目标文件已存在: {}", new_name));
-    }
-
-    fs::rename(source_path, &target_path)
-        .map_err(|e| format!("重命名失败: {}", e))?;
-
-    Ok(target_path.to_string_lossy().to_string())
-}
-
-pub fn delete_to_trash(paths: Vec<String>) -> BatchOperationResult {
-    let mut results = Vec::new();
-    let mut success_count = 0;
-    let mut fail_count = 0;
-
-    for path_str in paths {
-        let path = Path::new(&path_str);
-        if !path.exists() {
-            results.push(OperationResult {
-                success: true,
-                message: Some("文件不存在，跳过".to_string()),
-                error: None,
-            });
-            success_count += 1;
-            continue;
-        }
-
-        match trash::delete(path) {
-            Ok(_) => {
-                results.push(OperationResult {
-                    success: true,
-                    message: Some(format!("已移至回收站: {}", path_str)),
-                    error: None,
-                });
-                success_count += 1;
-            }
-            Err(e) => {
-                results.push(OperationResult {
-                    success: false,
-                    message: None,
-                    error: Some(format!("移入回收站失败: {}", e)),
-                });
-                fail_count += 1;
-            }
-        }
-    }
-
-    BatchOperationResult {
-        total: results.len(),
-        success_count,
-        fail_count,
-        results,
-    }
-}
-
 pub fn compute_md5(path: &str) -> Result<String, String> {
     use md5::{Digest, Md5};
     use std::io::Read;
@@ -334,110 +167,6 @@ pub fn format_file_size(size: u64) -> String {
     } else {
         format!("{:.2} {}", size, UNITS[unit_idx])
     }
-}
-
-pub fn organize_files(
-    source_dirs: &[String],
-    target_dir: &str,
-    rule: &OrganizeRule,
-) -> Result<Vec<OrganizeResult>, String> {
-    let target_path = Path::new(target_dir);
-    if !target_path.exists() {
-        fs::create_dir_all(target_path).map_err(|e| format!("创建目标目录失败: {}", e))?;
-    }
-
-    let mut results = Vec::new();
-
-    for source_dir in source_dirs {
-        let source_path = Path::new(source_dir);
-        if !source_path.exists() || !source_path.is_dir() {
-            continue;
-        }
-
-        for entry in walkdir::WalkDir::new(source_path)
-            .follow_links(false)
-            .into_iter()
-            .filter_entry(|e| !e.file_name().to_string_lossy().starts_with('.'))
-        {
-            let entry = match entry {
-                Ok(e) => e,
-                Err(_) => continue,
-            };
-
-            if !entry.file_type().is_file() {
-                continue;
-            }
-
-            let file_path = entry.path();
-            let file_path_str = file_path.to_string_lossy().to_string();
-
-            let start_time = std::time::Instant::now();
-            let file_metadata = collect_file_metadata(file_path, rule);
-
-            let target_subpath = match build_target_path(file_path, target_path, rule) {
-                Ok(p) => p,
-                Err(e) => {
-                    let elapsed_ms = start_time.elapsed().as_millis() as u64;
-                    results.push(OrganizeResult {
-                        source_path: file_path_str,
-                        target_path: String::new(),
-                        success: false,
-                        error: Some(e),
-                        metadata: file_metadata,
-                        process_time_ms: Some(elapsed_ms),
-                    });
-                    continue;
-                }
-            };
-
-            if let Some(parent) = target_subpath.parent() {
-                if let Err(e) = fs::create_dir_all(parent) {
-                    let elapsed_ms = start_time.elapsed().as_millis() as u64;
-                    results.push(OrganizeResult {
-                        source_path: file_path_str,
-                        target_path: target_subpath.to_string_lossy().to_string(),
-                        success: false,
-                        error: Some(format!("创建目录失败: {}", e)),
-                        metadata: file_metadata,
-                        process_time_ms: Some(elapsed_ms),
-                    });
-                    continue;
-                }
-            }
-
-            let target_path_str = target_subpath.to_string_lossy().to_string();
-            let op_result = fs::copy(file_path, &target_subpath)
-                .map(|_| ())
-                .map_err(|e| format!("复制文件失败: {}", e));
-
-            let elapsed_ms = start_time.elapsed().as_millis() as u64;
-
-            match op_result {
-                Ok(_) => {
-                    results.push(OrganizeResult {
-                        source_path: file_path_str,
-                        target_path: target_path_str,
-                        success: true,
-                        error: None,
-                        metadata: file_metadata,
-                        process_time_ms: Some(elapsed_ms),
-                    });
-                }
-                Err(e) => {
-                    results.push(OrganizeResult {
-                        source_path: file_path_str,
-                        target_path: target_path_str,
-                        success: false,
-                        error: Some(e),
-                        metadata: file_metadata,
-                        process_time_ms: Some(elapsed_ms),
-                    });
-                }
-            }
-        }
-    }
-
-    Ok(results)
 }
 
 pub fn organize_files_with_progress<F>(
@@ -1003,88 +732,6 @@ fn get_size_category(size: u64) -> String {
     }.to_string()
 }
 
-pub fn batch_rename(
-    paths: &[String],
-    target_dir: &str,
-    rule: &RenameRule,
-) -> Result<Vec<RenameResult>, String> {
-    let target_path = Path::new(target_dir);
-    if !target_path.exists() {
-        fs::create_dir_all(target_path)
-            .map_err(|e| format!("创建目标目录失败: {}", e))?;
-    }
-
-    let mut results = Vec::new();
-    let mut index = rule.start_index;
-
-    for path_str in paths {
-        let source_path = Path::new(path_str);
-        if !source_path.exists() {
-            results.push(RenameResult {
-                source_path: path_str.clone(),
-                new_name: String::new(),
-                target_path: String::new(),
-                success: false,
-                error: Some("源文件不存在".to_string()),
-            });
-            continue;
-        }
-
-        let metadata = match fs::metadata(source_path) {
-            Ok(m) => m,
-            Err(e) => {
-                results.push(RenameResult {
-                    source_path: path_str.clone(),
-                    new_name: String::new(),
-                    target_path: String::new(),
-                    success: false,
-                    error: Some(format!("获取元数据失败: {}", e)),
-                });
-                continue;
-            }
-        };
-
-        let original_name = source_path
-            .file_stem()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_else(|| "file".to_string());
-        let extension = source_path
-            .extension()
-            .map(|e| format!(".{}", e.to_string_lossy()))
-            .unwrap_or_default();
-
-        let new_name_base = build_rename(&original_name, &metadata, rule, index, source_path);
-        let new_name = format!("{}{}", new_name_base, extension);
-
-        let (final_name, final_target_path) = resolve_duplicate_filename(target_path, &new_name);
-        let target_path_str = final_target_path.to_string_lossy().to_string();
-
-        match fs::copy(source_path, &final_target_path) {
-            Ok(_) => {
-                results.push(RenameResult {
-                    source_path: path_str.clone(),
-                    new_name: final_name,
-                    target_path: target_path_str,
-                    success: true,
-                    error: None,
-                });
-                index += 1;
-            }
-            Err(e) => {
-                results.push(RenameResult {
-                    source_path: path_str.clone(),
-                    new_name: final_name,
-                    target_path: target_path_str,
-                    success: false,
-                    error: Some(format!("复制文件失败: {}", e)),
-                });
-            }
-        }
-    }
-
-    Ok(results)
-}
-
 fn resolve_duplicate_filename(target_dir: &Path, base_name: &str) -> (String, PathBuf) {
     let target_path = target_dir.join(base_name);
     
@@ -1278,113 +925,6 @@ fn get_time_of_day(
     }
 }
 
-pub fn find_duplicates(
-    paths: &[String],
-    detect_mode: &str,
-) -> Result<DuplicateScanResult, String> {
-    use std::collections::HashMap;
-
-    let mut file_map: HashMap<String, Vec<DuplicateFile>> = HashMap::new();
-    let mut total_files = 0u64;
-    let mut size_map: HashMap<String, u64> = HashMap::new();
-
-    for path_str in paths {
-        let path = Path::new(path_str);
-        if !path.exists() {
-            continue;
-        }
-
-        for entry in walkdir::WalkDir::new(path)
-            .follow_links(false)
-            .into_iter()
-            .filter_entry(|e| !e.file_name().to_string_lossy().starts_with('.'))
-        {
-            let entry = match entry {
-                Ok(e) => e,
-                Err(_) => continue,
-            };
-
-            if !entry.file_type().is_file() {
-                continue;
-            }
-
-            total_files += 1;
-            let file_path = entry.path();
-            let file_path_str = file_path.to_string_lossy().to_string();
-
-            let metadata = match fs::metadata(file_path) {
-                Ok(m) => m,
-                Err(_) => continue,
-            };
-
-            let size = metadata.len();
-            let modified = metadata
-                .modified()
-                .ok()
-                .and_then(|t| {
-                    t.duration_since(std::time::UNIX_EPOCH).ok().map(|d| {
-                        chrono::DateTime::from_timestamp(d.as_secs() as i64, 0)
-                            .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
-                            .unwrap_or_else(|| "unknown".to_string())
-                    })
-                })
-                .unwrap_or_else(|| "unknown".to_string());
-
-            let name = entry.file_name().to_string_lossy().to_string();
-
-            let key = if detect_mode == "size" {
-                format!("size_{}", size)
-            } else {
-                match compute_md5(&file_path_str) {
-                    Ok(md5) => md5,
-                    Err(_) => continue,
-                }
-            };
-
-            size_map.insert(key.clone(), size);
-            file_map
-                .entry(key)
-                .or_insert_with(Vec::new)
-                .push(DuplicateFile {
-                    path: file_path_str,
-                    name,
-                    modified,
-                    is_original: false,
-                });
-        }
-    }
-
-    let mut duplicate_groups: Vec<DuplicateGroup> = Vec::new();
-    let mut total_duplicates = 0u64;
-    let mut wasted_space = 0u64;
-
-    for (key, mut files) in file_map {
-        if files.len() > 1 {
-            files.sort_by(|a, b| a.modified.cmp(&b.modified));
-            files[0].is_original = true;
-
-            let size = *size_map.get(&key).unwrap_or(&0);
-            total_duplicates += (files.len() - 1) as u64;
-            wasted_space += size * (files.len() - 1) as u64;
-
-            duplicate_groups.push(DuplicateGroup {
-                md5: key,
-                size,
-                files,
-            });
-        }
-    }
-
-    duplicate_groups.sort_by(|a, b| b.size.cmp(&a.size));
-
-    Ok(DuplicateScanResult {
-        total_files,
-        duplicate_groups,
-        total_duplicates,
-        wasted_space,
-    })
-}
-
 pub fn clean_duplicates(
     paths: Vec<String>,
     keep_original: bool,
@@ -1529,136 +1069,6 @@ pub fn move_files_batch(
                     success: false,
                     message: None,
                     error: Some(e),
-                });
-                fail_count += 1;
-            }
-        }
-    }
-
-    Ok(BatchOperationResult {
-        total: results.len(),
-        success_count,
-        fail_count,
-        results,
-    })
-}
-
-pub fn scan_auxiliary_files(
-    paths: &[String],
-    cleanup_types: &[String],
-) -> Result<Vec<CleanupResult>, String> {
-    let mut results: Vec<CleanupResult> = Vec::new();
-
-    for path_str in paths {
-        let path = Path::new(path_str);
-        if !path.exists() {
-            continue;
-        }
-
-        for cleanup_type in cleanup_types {
-            let mut files: Vec<CleanupFile> = Vec::new();
-            let mut total_size = 0u64;
-
-            for entry in walkdir::WalkDir::new(path)
-                .follow_links(false)
-                .into_iter()
-                .filter_entry(|e| !e.file_name().to_string_lossy().starts_with('.'))
-            {
-                let entry = match entry {
-                    Ok(e) => e,
-                    Err(_) => continue,
-                };
-
-                if !entry.file_type().is_file() {
-                    continue;
-                }
-
-                let file_name = entry.file_name().to_string_lossy();
-                let file_path = entry.path();
-                let file_path_str = file_path.to_string_lossy().to_string();
-
-                let should_clean = if cleanup_type == "thumbnail" {
-                    file_name == "Thumbs.db" || file_name == "thumbs.db" ||
-                    file_name.starts_with(".thumb")
-                } else if cleanup_type == "temp" {
-                    file_name.ends_with(".tmp") || file_name.ends_with(".temp") ||
-                    file_name.ends_with(".bak") || file_name.starts_with("~$") ||
-                    file_name.starts_with(".~")
-                } else if cleanup_type == "ds_store" {
-                    file_name == ".DS_Store" || file_path_str.contains("__MACOSX")
-                } else if cleanup_type == "thumbs" {
-                    file_name == "Thumbs.db" || file_name == "thumbs.db"
-                } else if cleanup_type == "desktop.ini" {
-                    file_name == "desktop.ini" || file_name == "Desktop.ini"
-                } else {
-                    false
-                };
-
-                if should_clean {
-                    let metadata = match fs::metadata(file_path) {
-                        Ok(m) => m,
-                        Err(_) => continue,
-                    };
-
-                    let size = metadata.len();
-                    total_size += size;
-
-                    files.push(CleanupFile {
-                        path: file_path_str,
-                        name: file_name.to_string(),
-                        size,
-                        success: false,
-                        error: None,
-                    });
-                }
-            }
-
-            if !files.is_empty() {
-                results.push(CleanupResult {
-                    cleanup_type: cleanup_type.clone(),
-                    files,
-                    total_size,
-                });
-            }
-        }
-    }
-
-    Ok(results)
-}
-
-pub fn cleanup_auxiliary_files(
-    files: Vec<String>,
-) -> Result<BatchOperationResult, String> {
-    let mut results = Vec::new();
-    let mut success_count = 0;
-    let mut fail_count = 0;
-
-    for path_str in files {
-        let path = Path::new(&path_str);
-        if !path.exists() {
-            results.push(OperationResult {
-                success: false,
-                message: None,
-                error: Some("文件不存在".to_string()),
-            });
-            fail_count += 1;
-            continue;
-        }
-
-        match trash::delete(path) {
-            Ok(_) => {
-                results.push(OperationResult {
-                    success: true,
-                    message: Some(format!("已移至回收站: {}", path_str)),
-                    error: None,
-                });
-                success_count += 1;
-            }
-            Err(e) => {
-                results.push(OperationResult {
-                    success: false,
-                    message: None,
-                    error: Some(format!("移至回收站失败: {}", e)),
                 });
                 fail_count += 1;
             }
@@ -1922,6 +1332,23 @@ where
     })
 }
 
+fn is_cleanup_target(name: &str, path_str: &str, cleanup_type: &str) -> bool {
+    match cleanup_type {
+        "thumbnail" => {
+            name.eq_ignore_ascii_case("thumbs.db") || name.starts_with(".thumb")
+        }
+        "temp" => {
+            name.ends_with(".tmp") || name.ends_with(".temp")
+                || name.ends_with(".bak") || name.starts_with("~$")
+                || name.starts_with(".~")
+        }
+        "ds_store" => name == ".DS_Store" || path_str.contains("__MACOSX"),
+        "thumbs" => name.eq_ignore_ascii_case("thumbs.db"),
+        "desktop.ini" => name.eq_ignore_ascii_case("desktop.ini"),
+        _ => false,
+    }
+}
+
 pub fn scan_auxiliary_files_with_progress<F>(
     paths: &[String],
     cleanup_types: &[String],
@@ -1951,83 +1378,76 @@ where
 
         let mut processed = 0u64;
 
-        for cleanup_type in cleanup_types {
-            let mut files: Vec<CleanupFile> = Vec::new();
-            let mut total_size = 0u64;
+        // ponytail: single walk pass classifying files against all cleanup types,
+        // instead of re-walking the tree once per cleanup type (O(types × files) walks)
+        let mut per_type: HashMap<String, (u64, Vec<CleanupFile>)> = cleanup_types
+            .iter()
+            .map(|t| (t.clone(), (0u64, Vec::new())))
+            .collect();
 
-            for entry in walkdir::WalkDir::new(path)
-                .follow_links(false)
-                .into_iter()
-                .filter_entry(|e| !e.file_name().to_string_lossy().starts_with('.'))
-            {
-                let entry = match entry {
-                    Ok(e) => e,
-                    Err(_) => continue,
-                };
+        for entry in walkdir::WalkDir::new(path)
+            .follow_links(false)
+            .into_iter()
+            .filter_entry(|e| !e.file_name().to_string_lossy().starts_with('.'))
+        {
+            let entry = match entry {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
 
-                if !entry.file_type().is_file() {
+            if !entry.file_type().is_file() {
+                continue;
+            }
+
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            let file_path = entry.path();
+            let file_path_str = file_path.to_string_lossy().to_string();
+
+            processed += 1;
+            let progress = TaskProgress {
+                total: total_files,
+                processed,
+                current_item: Some(file_name.clone()),
+                percentage: if total_files > 0 { (processed as f64 / total_files as f64) * 100.0 } else { 0.0 },
+            };
+            progress_callback(&progress);
+
+            if cancel::is_cancelled() {
+                return Err("用户已取消操作".to_string());
+            }
+
+            for cleanup_type in cleanup_types {
+                if !is_cleanup_target(&file_name, &file_path_str, cleanup_type) {
                     continue;
                 }
 
-                let file_name = entry.file_name().to_string_lossy();
-                let file_path = entry.path();
-                let file_path_str = file_path.to_string_lossy().to_string();
-
-                processed += 1;
-                let progress = TaskProgress {
-                    total: total_files,
-                    processed,
-                    current_item: Some(file_name.to_string()),
-                    percentage: if total_files > 0 { (processed as f64 / total_files as f64) * 100.0 } else { 0.0 },
-                };
-                progress_callback(&progress);
-
-                if cancel::is_cancelled() {
-                    return Err("用户已取消操作".to_string());
-                }
-
-                let should_clean = if cleanup_type == "thumbnail" {
-                    file_name == "Thumbs.db" || file_name == "thumbs.db" ||
-                    file_name.starts_with(".thumb")
-                } else if cleanup_type == "temp" {
-                    file_name.ends_with(".tmp") || file_name.ends_with(".temp") ||
-                    file_name.ends_with(".bak") || file_name.starts_with("~$") ||
-                    file_name.starts_with(".~")
-                } else if cleanup_type == "ds_store" {
-                    file_name == ".DS_Store" || file_path_str.contains("__MACOSX")
-                } else if cleanup_type == "thumbs" {
-                    file_name == "Thumbs.db" || file_name == "thumbs.db"
-                } else if cleanup_type == "desktop.ini" {
-                    file_name == "desktop.ini" || file_name == "Desktop.ini"
-                } else {
-                    false
+                let metadata = match fs::metadata(file_path) {
+                    Ok(m) => m,
+                    Err(_) => continue,
                 };
 
-                if should_clean {
-                    let metadata = match fs::metadata(file_path) {
-                        Ok(m) => m,
-                        Err(_) => continue,
-                    };
+                let size = metadata.len();
+                let (total_size, files) = per_type.get_mut(cleanup_type).unwrap();
+                *total_size += size;
+                files.push(CleanupFile {
+                    path: file_path_str.clone(),
+                    name: file_name.clone(),
+                    size,
+                    success: false,
+                    error: None,
+                });
+            }
+        }
 
-                    let size = metadata.len();
-                    total_size += size;
-
-                    files.push(CleanupFile {
-                        path: file_path_str,
-                        name: file_name.to_string(),
-                        size,
-                        success: false,
-                        error: None,
+        for cleanup_type in cleanup_types {
+            if let Some((total_size, files)) = per_type.remove(cleanup_type) {
+                if !files.is_empty() {
+                    results.push(CleanupResult {
+                        cleanup_type: cleanup_type.clone(),
+                        files,
+                        total_size,
                     });
                 }
-            }
-
-            if !files.is_empty() {
-                results.push(CleanupResult {
-                    cleanup_type: cleanup_type.clone(),
-                    files,
-                    total_size,
-                });
             }
         }
     }
@@ -2097,4 +1517,25 @@ where
         fail_count,
         results,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_cleanup_target;
+
+    #[test]
+    fn cleanup_target_matching() {
+        assert!(is_cleanup_target("Thumbs.db", r"C:\a\Thumbs.db", "thumbnail"));
+        assert!(is_cleanup_target("THUMBS.DB", "", "thumbs"));
+        assert!(is_cleanup_target(".thumbnails", "", "thumbnail"));
+        assert!(is_cleanup_target("doc.tmp", "", "temp"));
+        assert!(is_cleanup_target("~$报告.docx", "", "temp"));
+        assert!(is_cleanup_target(".DS_Store", "", "ds_store"));
+        assert!(is_cleanup_target("x", r"C:\a\__MACOSX\x", "ds_store"));
+        assert!(is_cleanup_target("Desktop.ini", "", "desktop.ini"));
+        // 不应误判
+        assert!(!is_cleanup_target("thumbs.data", "", "thumbs"));
+        assert!(!is_cleanup_target("readme.txt", "", "temp"));
+        assert!(!is_cleanup_target("notes.bak2", "", "temp"));
+    }
 }

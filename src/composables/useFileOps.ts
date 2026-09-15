@@ -1,16 +1,9 @@
 import { invoke } from '@tauri-apps/api/core'
-import { ElMessage, ElNotification } from 'element-plus'
-import type { FileEntry, DirEntry, DirectoryStats } from '@/types'
+import { ElNotification } from 'element-plus'
+import { t } from '@/i18n'
+import type { DirectoryStats } from '@/types'
 
 export function useFileOps() {
-  const listDirectory = (path: string): Promise<FileEntry[]> => {
-    return invoke<FileEntry[]>('list_directory', { path })
-  }
-
-  const listSubdirs = (path: string): Promise<DirEntry[]> => {
-    return invoke<DirEntry[]>('list_subdirs', { path })
-  }
-
   const getDirectoryStats = (paths: string[]): Promise<DirectoryStats> => {
     return invoke<DirectoryStats>('get_directory_stats', { paths })
   }
@@ -33,7 +26,7 @@ export function useFileOps() {
     try {
       await invoke('open_in_explorer', { path })
     } catch (e: any) {
-      ElNotification({ type: 'error', title: '错误', message: `打开文件失败: ${e}` })
+      ElNotification({ type: 'error', title: t('app.error'), message: t('app.openFileFailed', { msg: String(e) }) })
     }
   }
 
@@ -50,8 +43,6 @@ export function useFileOps() {
   }
 
   return {
-    listDirectory,
-    listSubdirs,
     getDirectoryStats,
     getFileName,
     formatSize,

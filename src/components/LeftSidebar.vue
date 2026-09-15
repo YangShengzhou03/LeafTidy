@@ -5,69 +5,69 @@
         <el-icon>
           <HomeFilled />
         </el-icon>
-        <span>首页</span>
+        <span>{{ t('sidebar.left.home') }}</span>
       </div>
 
-      <div class="menu-group-title">通用文件工具</div>
+      <div class="menu-group-title">{{ t('sidebar.left.groupCommon') }}</div>
       <div class="menu-item" :class="{ active: activePanel === 'file-organize' }"
         @click="selectFunction('file-organize')">
         <el-icon>
           <FolderOpened />
         </el-icon>
-        <span>文件整理</span>
+        <span>{{ t('sidebar.left.fileOrganize') }}</span>
       </div>
       <div class="menu-item" :class="{ active: activePanel === 'batch-rename' }"
         @click="selectFunction('batch-rename')">
         <el-icon>
           <EditPen />
         </el-icon>
-        <span>批量重命名</span>
+        <span>{{ t('sidebar.left.batchRename') }}</span>
       </div>
       <div class="menu-item" :class="{ active: activePanel === 'duplicate-clean' }"
         @click="selectFunction('duplicate-clean')">
         <el-icon>
           <DeleteFilled />
         </el-icon>
-        <span>重复文件清理</span>
+        <span>{{ t('sidebar.left.duplicateClean') }}</span>
       </div>
       <div class="menu-item" :class="{ active: activePanel === 'cleanup' }" @click="selectFunction('cleanup')">
         <el-icon>
           <Delete />
         </el-icon>
-        <span>附属文件清理</span>
+        <span>{{ t('sidebar.left.associatedCleanup') }}</span>
       </div>
 
-      <div class="menu-group-title">照片与智能整理</div>
+      <div class="menu-group-title">{{ t('sidebar.left.groupPhoto') }}</div>
       <div class="menu-item" :class="{ active: activePanel === 'fix-date' }" @click="selectFunction('fix-date')">
         <el-icon>
           <Calendar />
         </el-icon>
-        <span>修复拍摄时间</span>
+        <span>{{ t('sidebar.left.fixDate') }}</span>
       </div>
       <div class="menu-item" :class="{ active: activePanel === 'exif-clean' }" @click="selectFunction('exif-clean')">
         <el-icon>
           <Hide />
         </el-icon>
-        <span>照片脱敏</span>
+        <span>{{ t('sidebar.left.exifClean') }}</span>
       </div>
       <div class="menu-item" :class="{ active: activePanel === 'write-gps' }" @click="selectFunction('write-gps')">
         <el-icon>
           <Location />
         </el-icon>
-        <span>写入地理信息</span>
+        <span>{{ t('sidebar.left.writeGps') }}</span>
       </div>
       <div class="menu-item" :class="{ active: activePanel === 'ai-classify' }" @click="selectFunction('ai-classify')">
         <el-icon>
           <MagicStick />
         </el-icon>
-        <span>AI 智能分类</span>
+        <span>{{ t('sidebar.left.aiClassify') }}</span>
       </div>
 
       <div class="menu-item" :class="{ active: activePanel === 'log-view' }" @click="selectFunction('log-view')">
         <el-icon>
           <Document />
         </el-icon>
-        <span>操作日志</span>
+        <span>{{ t('sidebar.left.logView') }}</span>
       </div>
     </div>
 
@@ -76,7 +76,7 @@
         <el-icon>
           <Setting />
         </el-icon>
-        <span>设置</span>
+        <span>{{ t('sidebar.left.settings') }}</span>
       </div>
     </div>
   </div>
@@ -84,6 +84,7 @@
 
 <script setup lang="ts">
 import { inject, type Ref } from 'vue'
+import { t } from '@/i18n'
 import type { FunctionPanel } from '@/types'
 import { HomeFilled, FolderOpened, EditPen, DeleteFilled, Delete, Calendar, Hide, Location, MagicStick, Document, Setting } from '@element-plus/icons-vue'
 
@@ -116,20 +117,25 @@ function selectFunction(id: FunctionPanel) {
   gap: 8px;
   padding: 4px 12px;
   cursor: pointer;
-  color: #C8D0DC;
+  color: var(--text-secondary);
   font-size: 13px;
   transition: background 0.15s;
   border-radius: 6px;
 }
 
 .menu-item:hover {
-  background: #2A2B30;
-  color: #E0E6ED;
+  background: var(--panel-2);
+  color: var(--text);
 }
 
 .menu-item.active {
-  background: #353639;
-  color: #FFFFFF;
+  background: var(--panel-2-hover);
+  color: var(--white);
+}
+
+:root[data-theme='light'] .menu-item.active {
+  background: var(--text);
+  color: var(--white);
 }
 
 .menu-item .el-icon {
@@ -139,13 +145,13 @@ function selectFunction(id: FunctionPanel) {
 .menu-group-title {
   padding: 16px 12px 8px;
   font-size: 11px;
-  color: #8A94A6;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .menu-footer {
   padding: 12px;
-  border-top: 1px solid #2A2B30;
+  border-top: 1px solid var(--panel-2);
 }
 </style>

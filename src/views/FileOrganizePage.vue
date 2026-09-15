@@ -1,22 +1,22 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2>文件整理</h2>
-      <p class="desc">按类型、日期、大小等规则自动整理文件到目标目录</p>
+      <h2>{{ t('organize.title') }}</h2>
+      <p class="desc">{{ t('organize.desc') }}</p>
     </div>
     <div class="page-content">
       <div class="config-panel">
         <div class="config-item">
-          <label>时间数据来源</label>
-          <el-select v-model="timeSource" placeholder="选择时间来源" style="width: 150px">
-            <el-option label="修改时间" value="modified" />
-            <el-option label="创建时间" value="created" />
-            <el-option label="拍摄日期" value="taken" />
+          <label>{{ t('organize.timeSourceLabel') }}</label>
+          <el-select v-model="timeSource" :placeholder="t('organize.timeSourcePlaceholder')" style="width: 150px">
+            <el-option :label="t('organize.timeSource.modified')" value="modified" />
+            <el-option :label="t('organize.timeSource.created')" value="created" />
+            <el-option :label="t('organize.timeSource.taken')" value="taken" />
           </el-select>
-          <span class="hint">用于年份、月份、日期分类</span>
+          <span class="hint">{{ t('organize.timeSourceHint') }}</span>
         </div>
         <div class="config-item">
-          <label>分类标签（点击添加，可重复选择）</label>
+          <label>{{ t('organize.tagsLabel') }}</label>
           <div class="tag-selector">
             <div class="tag-grid">
               <div v-for="tag in availableTags" :key="tag.value" class="tag-chip" @click="addTag(tag.value)">
@@ -29,7 +29,7 @@
           </div>
         </div>
         <div class="config-item" v-if="selectedTags.length > 0">
-          <label>文件夹层级（点击移除）</label>
+          <label>{{ t('organize.folderLevelsLabel') }}</label>
           <div class="path-builder">
             <div class="path-segments">
               <div v-for="(tag, index) in selectedTags" :key="index" class="path-segment" @click="removeTag(index)">
@@ -53,35 +53,35 @@
       <!-- 进度显示区域 -->
       <div class="progress-panel" v-if="organizing">
         <div class="progress-header">
-          <span class="progress-title">正在整理文件</span>
+          <span class="progress-title">{{ t('organize.progress.title') }}</span>
           <span class="progress-percent">{{ progress.percentage.toFixed(1) }}%</span>
         </div>
         <el-progress :percentage="progress.percentage" :stroke-width="12" :show-text="false" class="progress-bar" />
         <div class="progress-stats">
-          <span>总数: {{ progress.total }}</span>
-          <span>已处理: {{ progress.processed }}</span>
-          <span style="color: #52C41A;">成功: {{ progress.success_count }}</span>
-          <span style="color: #E81123;">失败: {{ progress.fail_count }}</span>
+          <span>{{ t('organize.progress.total', { n: progress.total }) }}</span>
+          <span>{{ t('organize.progress.processed', { n: progress.processed }) }}</span>
+          <span style="color: var(--success);">{{ t('organize.progress.success', { n: progress.success_count }) }}</span>
+          <span style="color: var(--danger);">{{ t('organize.progress.fail', { n: progress.fail_count }) }}</span>
         </div>
         <div class="progress-current" v-if="progress.current_file">
-          <span class="current-label">当前:</span>
+          <span class="current-label">{{ t('organize.progress.current') }}</span>
           <span class="current-file">{{ progress.current_file }}</span>
         </div>
       </div>
 
       <div class="action-bar">
         <el-button v-if="!organizing" type="primary" @click="startOrganize" :disabled="!canOrganize">
-          开始整理
+          {{ t('organize.action.start') }}
         </el-button>
         <el-button v-else type="danger" @click="stopOrganize">
-          终止整理
+          {{ t('organize.action.stop') }}
         </el-button>
       </div>
       <div class="result-panel" v-if="results.length > 0">
         <div class="result-header">
-          <span class="result-title">整理结果</span>
+          <span class="result-title">{{ t('organize.result.title') }}</span>
           <span class="result-stats">
-            成功: {{ successCount }} / 失败: {{ failCount }}
+            {{ t('organize.result.stats', { success: successCount, fail: failCount }) }}
           </span>
         </div>
         <!-- 失败结果 -->
@@ -90,7 +90,7 @@
             <el-icon>
               <CircleCloseFilled />
             </el-icon>
-            <span>失败 {{ failCount }} 个</span>
+            <span>{{ t('organize.result.failCount', { n: failCount }) }}</span>
           </div>
           <div class="result-list">
             <div v-for="(result, index) in failResults" :key="'fail-' + index" class="result-item fail">
@@ -109,7 +109,7 @@
             <el-icon>
               <SuccessFilled />
             </el-icon>
-            <span>成功 {{ successCount }} 个</span>
+            <span>{{ t('organize.result.successCount', { n: successCount }) }}</span>
           </div>
           <div class="result-list">
             <div v-for="(result, index) in successResults" :key="'success-' + index" class="result-item success">
@@ -131,12 +131,13 @@
 
 <script setup lang="ts">
 import { ref, computed, inject, type Ref, onMounted, onUnmounted } from 'vue'
-import { ElMessage, ElNotification } from 'element-plus'
+import { ElNotification } from 'element-plus'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { FolderOpened, Document, Calendar, Clock, MapLocation, Location, Camera, VideoCamera, Files, Coin, Close, SuccessFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import { useFileOps } from '@/composables/useFileOps'
 import { useLog, type OrganizeLogOptions, type FileResult } from '@/composables/useLog'
+import { t } from '@/i18n'
 import type { WorkDirectory, OrganizeResult, OrganizeProgress, CancelResult } from '@/types'
 
 const workDirs = inject<Ref<WorkDirectory[]>>('workDirs')!
@@ -172,6 +173,7 @@ function loadState() {
       if (state.timeSource) timeSource.value = state.timeSource
     }
   } catch {
+    // 状态加载失败时使用默认值
   }
 }
 
@@ -182,7 +184,8 @@ function saveState() {
       timeSource: timeSource.value,
     }))
   } catch {
-    }
+    // 保存失败时忽略
+  }
 }
 
 onMounted(async () => {
@@ -199,24 +202,24 @@ onUnmounted(() => {
   }
 })
 
-const availableTags = [
-  { value: 'type', label: '文件类型', icon: Document },
-  { value: 'year', label: '年份', icon: Calendar },
-  { value: 'month', label: '月份', icon: Clock },
-  { value: 'day', label: '日', icon: Calendar },
-  { value: 'date', label: '日期', icon: Calendar },
-  { value: 'province', label: '省份', icon: MapLocation },
-  { value: 'city', label: '城市', icon: Location },
-  { value: 'district', label: '区县', icon: Location },
-  { value: 'place', label: '地点', icon: Location },
-  { value: 'make', label: '相机品牌', icon: Camera },
-  { value: 'model', label: '相机型号', icon: VideoCamera },
-  { value: 'ext', label: '扩展名', icon: Files },
-  { value: 'size', label: '文件大小', icon: Coin },
-]
+const availableTags = computed(() => [
+  { value: 'type', label: t('organize.tag.type'), icon: Document },
+  { value: 'year', label: t('organize.tag.year'), icon: Calendar },
+  { value: 'month', label: t('organize.tag.month'), icon: Clock },
+  { value: 'day', label: t('organize.tag.day'), icon: Calendar },
+  { value: 'date', label: t('organize.tag.date'), icon: Calendar },
+  { value: 'province', label: t('organize.tag.province'), icon: MapLocation },
+  { value: 'city', label: t('organize.tag.city'), icon: Location },
+  { value: 'district', label: t('organize.tag.district'), icon: Location },
+  { value: 'place', label: t('organize.tag.place'), icon: Location },
+  { value: 'make', label: t('organize.tag.make'), icon: Camera },
+  { value: 'model', label: t('organize.tag.model'), icon: VideoCamera },
+  { value: 'ext', label: t('organize.tag.ext'), icon: Files },
+  { value: 'size', label: t('organize.tag.size'), icon: Coin },
+])
 
 function getTagLabel(value: string): string {
-  const tag = availableTags.find(t => t.value === value)
+  const tag = availableTags.value.find(item => item.value === value)
   return tag ? tag.label : value
 }
 
@@ -230,15 +233,15 @@ function removeTag(index: number) {
 
 const previewPath = computed(() => {
   const examples: Record<string, string> = {
-    type: '图片',
+    type: t('organize.example.type'),
     year: '2024',
     month: '01',
     day: '15',
     date: '2024-01-15',
-    province: '浙江省',
-    city: '杭州市',
-    district: '滨江区',
-    place: '星民村',
+    province: t('organize.example.province'),
+    city: t('organize.example.city'),
+    district: t('organize.example.district'),
+    place: t('organize.example.place'),
     make: 'Canon',
     model: 'EOS_R5',
     ext: 'jpg',
@@ -259,15 +262,15 @@ const failResults = computed(() => results.value.filter(r => !r.success))
 async function stopOrganize() {
   try {
     await invoke<CancelResult>('cancel_operation')
-    ElNotification({ type: 'info', title: '提示', message: '正在终止整理操作...' })
+    ElNotification({ type: 'info', title: t('organize.tipTitle'), message: t('organize.notify.stopping') })
   } catch (e: any) {
-    ElNotification({ type: 'error', title: '错误', message: `终止失败: ${e}` })
+    ElNotification({ type: 'error', title: t('organize.errorTitle'), message: t('organize.notify.stopFailed', { msg: e }) })
   }
 }
 
 async function startOrganize() {
   if (!canOrganize.value) {
-    ElNotification({ type: 'warning', title: '警告', message: '请先选择待处理目录、输出目录和分类标签' })
+    ElNotification({ type: 'warning', title: t('organize.warnTitle'), message: t('organize.notify.missingConfig') })
     return
   }
 
@@ -331,21 +334,21 @@ async function startOrganize() {
       const success = res.filter(r => r.success).length
       const fail = res.filter(r => !r.success).length
       if (fail === 0) {
-        ElNotification({ type: 'success', title: '成功', message: `整理完成，共处理 ${success} 个文件` })
+        ElNotification({ type: 'success', title: t('organize.successTitle'), message: t('organize.notify.doneAll', { n: success }) })
       } else {
-        ElNotification({ type: 'warning', title: '警告', message: `整理完成，成功 ${success} 个，失败 ${fail} 个` })
+        ElNotification({ type: 'warning', title: t('organize.warnTitle'), message: t('organize.notify.donePartial', { success, fail }) })
       }
     } else {
-      ElNotification({ type: 'info', title: '提示', message: '没有找到需要整理的文件' })
+      ElNotification({ type: 'info', title: t('organize.tipTitle'), message: t('organize.notify.noFiles') })
     }
   } catch (e: any) {
     const errMsg = String(e)
     if (errMsg.includes('用户已取消')) {
       const sourceDirsStr = workDirs.value.map(d => d.path).join(', ')
       await logCancelledOperation('organize', sourceDirsStr, `源目录: ${sourceDirsStr}`)
-      ElNotification({ type: 'info', title: '提示', message: '整理操作已取消' })
+      ElNotification({ type: 'info', title: t('organize.tipTitle'), message: t('organize.notify.cancelled') })
     } else {
-      ElNotification({ type: 'error', title: '错误', message: `整理失败: ${errMsg}` })
+      ElNotification({ type: 'error', title: t('organize.errorTitle'), message: t('organize.notify.failed', { msg: errMsg }) })
     }
   } finally {
     organizing.value = false
@@ -357,7 +360,7 @@ async function startOrganize() {
 <style scoped>
 .page-container {
   height: 100%;
-  background: #18191C;
+  background: var(--bg);
   padding: 24px;
   overflow-y: auto;
 }
@@ -369,17 +372,17 @@ async function startOrganize() {
 .page-header h2 {
   font-size: 16px;
   font-weight: 500;
-  color: #E0E6ED;
+  color: var(--text);
   margin-bottom: 6px;
 }
 
 .page-header .desc {
   font-size: 13px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .config-panel {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
@@ -396,19 +399,19 @@ async function startOrganize() {
 .config-item label {
   display: block;
   font-size: 13px;
-  color: #C8D0DC;
+  color: var(--text-secondary);
   margin-bottom: 12px;
   font-weight: 500;
 }
 
 .config-item .hint {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
   margin-left: 12px;
 }
 
 .tag-selector {
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 8px;
   padding: 16px;
 }
@@ -424,29 +427,29 @@ async function startOrganize() {
   align-items: center;
   gap: 6px;
   padding: 10px 12px;
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 6px;
-  border: 1px solid #3A3B40;
+  border: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .tag-chip:hover {
-  background: #353639;
+  background: var(--panel-2-hover);
 }
 
 .tag-chip .el-icon {
   font-size: 14px;
-  color: #C8D0DC;
+  color: var(--text-secondary);
 }
 
 .tag-chip span {
   font-size: 13px;
-  color: #C8D0DC;
+  color: var(--text-secondary);
 }
 
 .path-builder {
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 8px;
   padding: 16px;
 }
@@ -463,7 +466,7 @@ async function startOrganize() {
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: #3A86FF;
+  background: var(--primary);
   border-radius: 6px;
   cursor: pointer;
   user-select: none;
@@ -476,20 +479,20 @@ async function startOrganize() {
 
 .segment-order {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.2);
+  color: rgba(var(--white-rgb), 0.7);
+  background: rgba(var(--white-rgb), 0.2);
   padding: 2px 6px;
   border-radius: 4px;
 }
 
 .segment-name {
   font-size: 13px;
-  color: #FFFFFF;
+  color: var(--white);
 }
 
 .segment-remove {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(var(--white-rgb), 0.7);
 }
 
 .path-preview {
@@ -497,25 +500,25 @@ async function startOrganize() {
   align-items: center;
   gap: 8px;
   padding: 12px;
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 6px;
-  border: 1px dashed #3A3B40;
+  border: 1px dashed var(--border);
 }
 
 .path-preview .el-icon {
   font-size: 16px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .preview-text {
   font-size: 13px;
-  color: #8A94A6;
+  color: var(--text-muted);
   word-break: break-all;
 }
 
 .source-info,
 .target-info {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
@@ -531,12 +534,12 @@ async function startOrganize() {
 .info-title {
   font-size: 13px;
   font-weight: 500;
-  color: #C8D0DC;
+  color: var(--text-secondary);
 }
 
 .info-count {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .info-list {
@@ -550,24 +553,24 @@ async function startOrganize() {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 6px;
 }
 
 .info-item .el-icon {
   font-size: 16px;
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 .info-name {
   font-size: 13px;
-  color: #E0E6ED;
+  color: var(--text);
   font-weight: 500;
 }
 
 .info-path {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -579,26 +582,26 @@ async function startOrganize() {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 6px;
 }
 
 .info-content .el-icon {
   font-size: 16px;
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 .empty-hint {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #8A94A6;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
 .empty-hint .el-icon {
   font-size: 16px;
-  color: #E81123;
+  color: var(--danger);
 }
 
 .action-bar {
@@ -608,7 +611,7 @@ async function startOrganize() {
 }
 
 .progress-panel {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
@@ -624,13 +627,13 @@ async function startOrganize() {
 .progress-title {
   font-size: 14px;
   font-weight: 500;
-  color: #E0E6ED;
+  color: var(--text);
 }
 
 .progress-percent {
   font-size: 16px;
   font-weight: 600;
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 .progress-bar {
@@ -641,7 +644,7 @@ async function startOrganize() {
   display: flex;
   gap: 16px;
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .progress-current {
@@ -650,26 +653,26 @@ async function startOrganize() {
   gap: 8px;
   margin-top: 12px;
   padding: 8px 12px;
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 6px;
 }
 
 .current-label {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
 .current-file {
   font-size: 12px;
-  color: #E0E6ED;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .result-panel {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   padding: 16px;
 }
@@ -705,24 +708,24 @@ async function startOrganize() {
 }
 
 .fail-label {
-  background: rgba(232, 17, 35, 0.15);
-  color: #E81123;
+  background: rgba(var(--danger-rgb), 0.15);
+  color: var(--danger);
 }
 
 .success-label {
-  background: rgba(82, 196, 26, 0.15);
-  color: #52C41A;
+  background: rgba(var(--success-rgb), 0.15);
+  color: var(--success);
 }
 
 .result-title {
   font-size: 13px;
   font-weight: 500;
-  color: #C8D0DC;
+  color: var(--text-secondary);
 }
 
 .result-stats {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .result-list {
@@ -738,7 +741,7 @@ async function startOrganize() {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 6px;
 }
 
@@ -748,16 +751,16 @@ async function startOrganize() {
 }
 
 .result-item.success .el-icon {
-  color: #52C41A;
+  color: var(--success);
 }
 
 .result-item.fail .el-icon {
-  color: #E81123;
+  color: var(--danger);
 }
 
 .result-name {
   font-size: 12px;
-  color: #E0E6ED;
+  color: var(--text);
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -771,18 +774,18 @@ async function startOrganize() {
 }
 
 .result-name.clickable:hover {
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 .result-arrow {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
 .result-target {
   font-size: 12px;
-  color: #3A86FF;
+  color: var(--primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -800,7 +803,7 @@ async function startOrganize() {
 
 .result-item .result-error-inline {
   font-size: 12px;
-  color: #E81123;
+  color: var(--danger);
   flex-shrink: 0;
   margin-left: auto;
 }

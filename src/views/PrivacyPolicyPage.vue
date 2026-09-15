@@ -1,80 +1,174 @@
 <template>
   <div class="privacy-page">
     <div class="privacy-content">
-      <h1 class="page-title">隐私政策</h1>
+      <h1 class="page-title">{{ t('legal.privacy.title') }}</h1>
+      <p class="page-meta">{{ t('legal.privacy.meta') }}</p>
 
       <div class="policy-section">
-        <div class="section-title">引言</div>
+        <div class="section-title">{{ t('legal.privacy.s1') }}</div>
         <div class="section-content">
-          <p>欢迎您使用轻羽归档(LeafTidy)应用程序。我们非常重视您的隐私保护和个人信息保护。本隐私政策将向您说明我们如何收集、使用、存储和保护您的信息，以及您享有的相关权利。</p>
-          <p>在使用本应用前，请您仔细阅读并充分理解本政策。如果您不同意本政策的任何内容，请您立即停止使用本应用。</p>
+          <p>{{ t('legal.privacy.s1p1') }}</p>
+          <p>{{ t('legal.privacy.s1p2') }}</p>
         </div>
       </div>
 
       <div class="policy-section">
-        <div class="section-title">信息收集</div>
+        <div class="section-title">{{ t('legal.privacy.s2') }}</div>
         <div class="section-content">
-          <p>轻羽归档是一款本地文件管理工具，我们的设计理念是最大限度保护您的隐私：</p>
-          <ul>
-            <li>本应用主要在您的设备本地运行，处理的照片和文件信息均存储在您的本地设备上</li>
-            <li>我们不会自动收集您的个人信息、照片内容或文件信息</li>
-            <li>应用不会在后台自动上传任何数据到远程服务器</li>
-          </ul>
+          <p>{{ t('legal.privacy.s2p1') }}</p>
+          <p>{{ t('legal.privacy.s2l1') }}</p>
+          <p>{{ t('legal.privacy.s2l2') }}</p>
+          <p>{{ t('legal.privacy.s2l3') }}</p>
+          <p>{{ t('legal.privacy.s2l4') }}</p>
+          <p>{{ t('legal.privacy.s2l5') }}</p>
+          <p>{{ t('legal.privacy.s2l6') }}</p>
+          <p>{{ t('legal.privacy.s2l7') }}</p>
+          <p>{{ t('legal.privacy.s2l8') }}</p>
+          <p>{{ t('legal.privacy.s2p2') }}</p>
         </div>
       </div>
 
       <div class="policy-section">
-        <div class="section-title">本地数据处理</div>
+        <div class="section-title">{{ t('legal.privacy.s3') }}</div>
         <div class="section-content">
-          <p>本应用处理的所有数据均在您的本地设备上完成：</p>
-          <ul>
-            <li>照片整理、重命名、清理等操作均在本地完成</li>
-            <li>EXIF信息读取和修改仅在本地进行</li>
-            <li>AI分类功能需要在本地模型支持下运行，相关数据不会上传到云端</li>
-            <li>日志文件仅保存在您的本地应用数据目录中</li>
-          </ul>
+          <p><strong>{{ t('legal.privacy.s3l1a') }}</strong>{{ t('legal.privacy.s3l1b') }}</p>
+          <p><strong>{{ t('legal.privacy.s3l2a') }}</strong>{{ t('legal.privacy.s3l2b') }}</p>
+          <p><strong>{{ t('legal.privacy.s3l3a') }}</strong>{{ t('legal.privacy.s3l3b') }}</p>
+          <p><strong>{{ t('legal.privacy.s3l4a') }}</strong>{{ t('legal.privacy.s3l4b') }}</p>
         </div>
       </div>
 
       <div class="policy-section">
-        <div class="section-title">数据安全</div>
+        <div class="section-title">{{ t('legal.privacy.s4') }}</div>
         <div class="section-content">
-          <p>我们采取多种措施保护您的数据安全：</p>
-          <ul>
-            <li>所有文件操作均需您的明确授权和确认</li>
-            <li>应用运行在沙盒环境中，仅能访问您明确授权的目录</li>
-            <li>敏感操作会生成详细的日志记录，方便您追溯和审计</li>
-          </ul>
+          <p>{{ t('legal.privacy.s4p1') }}</p>
+          <p><strong>{{ t('legal.privacy.s4l1a') }}</strong>{{ t('legal.privacy.s4l1b') }}</p>
+          <p><strong>{{ t('legal.privacy.s4l2a') }}</strong>{{ t('legal.privacy.s4l2b') }}</p>
+          <p><strong>{{ t('legal.privacy.s4l3a') }}</strong>{{ t('legal.privacy.s4l3b') }}</p>
+          <p><strong>{{ t('legal.privacy.s4l4a') }}</strong>{{ t('legal.privacy.s4l4b') }}</p>
+          <p><strong>{{ t('legal.privacy.s4l5a') }}</strong>{{ t('legal.privacy.s4l5b') }}</p>
+          <p><strong>{{ t('legal.privacy.s4l6a') }}</strong>{{ t('legal.privacy.s4l6b') }}</p>
+          <p>{{ t('legal.privacy.s4p2') }}</p>
         </div>
       </div>
 
       <div class="policy-section">
-        <div class="section-title">您的权利</div>
+        <div class="section-title">{{ t('legal.privacy.s5') }}</div>
         <div class="section-content">
-          <p>您对自己的数据享有完整的控制权：</p>
-          <ul>
-            <li>您可以随时查看、修改或删除应用处理的文件</li>
-            <li>您可以查看和清除应用生成的操作日志</li>
-            <li>您可以随时卸载应用，卸载后应用及相关数据将从您的设备中移除</li>
-          </ul>
+          <p>{{ t('legal.privacy.s5p1') }}</p>
+          <p><strong>{{ t('legal.privacy.s5l1a') }}</strong>{{ t('legal.privacy.s5l1b') }}</p>
+          <p><strong>{{ t('legal.privacy.s5l2a') }}</strong>{{ t('legal.privacy.s5l2b') }}</p>
+          <p><strong>{{ t('legal.privacy.s5l3a') }}</strong>{{ t('legal.privacy.s5l3b') }}</p>
+          <p><strong>{{ t('legal.privacy.s5l4a') }}</strong>{{ t('legal.privacy.s5l4b') }}</p>
         </div>
       </div>
 
       <div class="policy-section">
-        <div class="section-title">政策更新</div>
+        <div class="section-title">{{ t('legal.privacy.s6') }}</div>
         <div class="section-content">
-          <p>我们可能会适时修订本隐私政策的内容。修订后的政策将在应用内公布，您可以在设置页面查看最新版本。如果您继续使用本应用，即表示您同意接受修订后的政策。</p>
+          <p>{{ t('legal.privacy.s6p1') }}</p>
+          <p><strong>{{ t('legal.privacy.s6l1a') }}</strong>{{ t('legal.privacy.s6l1b') }}</p>
+          <p>{{ t('legal.privacy.s6p2') }}</p>
         </div>
       </div>
 
       <div class="policy-section">
-        <div class="section-title">联系我们</div>
+        <div class="section-title">{{ t('legal.privacy.s7') }}</div>
         <div class="section-content">
-          <p>如果您对本隐私政策有任何疑问或建议，请通过以下方式联系我们：</p>
-          <ul>
-            <li>在 GitHub 上提交 Issue</li>
-            <li>通过应用内反馈功能联系我们</li>
-          </ul>
+          <p>{{ t('legal.privacy.s7p1') }}</p>
+          <p>{{ t('legal.privacy.s7l1') }}</p>
+          <p>{{ t('legal.privacy.s7l2') }}</p>
+        </div>
+      </div>
+
+      <div class="policy-section">
+        <div class="section-title">{{ t('legal.privacy.s8') }}</div>
+        <div class="section-content">
+          <p><strong>{{ t('legal.privacy.s8l1a') }}</strong>{{ t('legal.privacy.s8l1b') }}</p>
+          <p><strong>{{ t('legal.privacy.s8l2a') }}</strong>{{ t('legal.privacy.s8l2b') }}</p>
+          <p><strong>{{ t('legal.privacy.s8l3a') }}</strong>{{ t('legal.privacy.s8l3b') }}</p>
+        </div>
+      </div>
+
+      <div class="policy-section">
+        <div class="section-title">{{ t('legal.privacy.s9') }}</div>
+        <div class="section-content">
+          <p>{{ t('legal.privacy.s9p1') }}</p>
+          <p>{{ t('legal.privacy.s9l1') }}</p>
+          <p>{{ t('legal.privacy.s9l2') }}</p>
+          <p>{{ t('legal.privacy.s9l3') }}</p>
+          <p>{{ t('legal.privacy.s9l4') }}</p>
+          <p>{{ t('legal.privacy.s9p2') }}</p>
+        </div>
+      </div>
+
+      <div class="policy-section">
+        <div class="section-title">{{ t('legal.privacy.s10') }}</div>
+        <div class="section-content">
+          <p>{{ t('legal.privacy.s10p1') }}</p>
+        </div>
+      </div>
+
+      <div class="policy-section">
+        <div class="section-title">{{ t('legal.privacy.s11') }}</div>
+        <div class="section-content">
+          <p>{{ t('legal.privacy.s11p1') }}</p>
+          <p><strong>{{ t('legal.privacy.s11l1a') }}</strong>{{ t('legal.privacy.s11l1b') }}</p>
+          <p><strong>{{ t('legal.privacy.s11l2a') }}</strong>{{ t('legal.privacy.s11l2b') }}</p>
+          <p><strong>{{ t('legal.privacy.s11l3a') }}</strong>{{ t('legal.privacy.s11l3b') }}</p>
+          <p>{{ t('legal.privacy.s11p2') }}</p>
+        </div>
+      </div>
+
+      <div class="policy-section">
+        <div class="section-title">{{ t('legal.privacy.s12') }}</div>
+        <div class="section-content">
+          <p>{{ t('legal.privacy.s12p1') }}</p>
+        </div>
+      </div>
+
+      <div class="policy-section">
+        <div class="section-title">{{ t('legal.privacy.s13') }}</div>
+        <div class="section-content">
+          <p>{{ t('legal.privacy.s13p1') }}</p>
+          <p>{{ t('legal.privacy.s13l1') }}</p>
+          <p>{{ t('legal.privacy.s13l2') }}</p>
+          <p>{{ t('legal.privacy.s13l3') }}</p>
+          <p>{{ t('legal.privacy.s13p2') }}</p>
+        </div>
+      </div>
+
+      <div class="policy-section">
+        <div class="section-title">{{ t('legal.privacy.s14') }}</div>
+        <div class="section-content">
+          <p>{{ t('legal.privacy.s14p1') }}</p>
+          <p>{{ t('legal.privacy.s14p2') }}</p>
+        </div>
+      </div>
+
+      <div class="policy-section">
+        <div class="section-title">{{ t('legal.privacy.s15') }}</div>
+        <div class="section-content">
+          <p>{{ t('legal.privacy.s15p1') }}</p>
+        </div>
+      </div>
+
+      <div class="policy-section">
+        <div class="section-title">{{ t('legal.privacy.s16') }}</div>
+        <div class="section-content">
+          <p>{{ t('legal.privacy.s16p1') }}</p>
+          <p>{{ t('legal.privacy.s16l1') }}</p>
+          <p>{{ t('legal.privacy.s16l2') }}</p>
+          <p>{{ t('legal.privacy.s16l3') }}</p>
+          <p>{{ t('legal.privacy.s16p2') }}</p>
+        </div>
+      </div>
+
+      <div class="privacy-section">
+        <div class="section-title">{{ t('legal.privacy.s17') }}</div>
+        <div class="section-content">
+          <p>{{ t('legal.privacy.s17p1') }}</p>
+          <p>{{ t('legal.privacy.s17p2') }}</p>
         </div>
       </div>
     </div>
@@ -82,12 +176,16 @@
 </template>
 
 <script setup lang="ts">
+import { t } from '@/i18n'
+import { useConfetti } from '@/composables/useConfetti'
+
+useConfetti()
 </script>
 
 <style scoped>
 .privacy-page {
   height: 100%;
-  background: #18191C;
+  background: var(--bg);
   overflow-y: auto;
 }
 
@@ -100,9 +198,16 @@
 .page-title {
   font-size: 20px;
   font-weight: 500;
-  color: #E0E6ED;
-  margin: 0 0 32px 0;
+  color: var(--text);
+  margin: 0 0 8px 0;
   text-align: center;
+}
+
+.page-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 28px;
 }
 
 .policy-section {
@@ -112,14 +217,14 @@
 .section-title {
   font-size: 15px;
   font-weight: 500;
-  color: #E0E6ED;
+  color: var(--text);
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #2A2B30;
+  border-bottom: 1px solid var(--panel-2);
 }
 
 .section-content {
-  color: #C8D0DC;
+  color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.8;
 }
@@ -128,13 +233,8 @@
   margin-bottom: 12px;
 }
 
-.section-content ul {
-  padding-left: 20px;
-  margin-bottom: 12px;
-}
-
-.section-content li {
-  margin-bottom: 8px;
-  list-style-type: disc;
+.section-content strong {
+  color: var(--text);
+  font-weight: 600;
 }
 </style>

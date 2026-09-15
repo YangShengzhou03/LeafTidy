@@ -3,8 +3,8 @@
     <div class="home-content">
       <div ref="workDirRef" class="directory-section">
         <div class="section-header">
-          <span class="section-title">待处理目录</span>
-          <el-button size="small" type="primary" @click="selectWorkDirs">添加</el-button>
+          <span class="section-title">{{ t('home.workDirs.title') }}</span>
+          <el-button size="small" type="primary" @click="selectWorkDirs">{{ t('home.add') }}</el-button>
         </div>
         <div class="directory-list">
           <div v-for="dir in workDirs" :key="dir.path" class="directory-item">
@@ -23,21 +23,22 @@
             <el-icon>
               <Plus />
             </el-icon>
-            <span>点击添加待处理目录</span>
+            <span>{{ t('home.workDirs.empty') }}</span>
           </div>
         </div>
       </div>
 
       <div ref="outputDirRef" class="directory-section">
         <div class="section-header">
-          <span class="section-title">输出目录</span>
-          <el-button size="small" type="primary" @click="selectOutputDir">添加</el-button>
+          <span class="section-title">{{ t('home.outputDir.title') }}</span>
+          <el-button size="small" type="primary" @click="selectOutputDir">{{ t('home.add') }}</el-button>
         </div>
         <div class="directory-list">
           <div v-if="outputDir" class="directory-item">
             <el-icon>
               <FolderOpened />
             </el-icon>
+            <span class="dir-name">{{ outputDirName }}</span>
             <span class="dir-path">{{ outputDir }}</span>
             <el-button text class="remove-btn" @click="clearOutputDir">
               <el-icon>
@@ -49,48 +50,48 @@
             <el-icon>
               <Plus />
             </el-icon>
-            <span>点击选择输出目录</span>
+            <span>{{ t('home.outputDir.empty') }}</span>
           </div>
         </div>
       </div>
 
       <div ref="quickActionsRef" class="quick-actions">
-        <div class="section-title">快速操作</div>
+        <div class="section-title">{{ t('home.quickActions.title') }}</div>
         <div class="action-grid">
           <div class="action-card" @click="goTo('file-organize')">
             <el-icon>
               <FolderOpened />
             </el-icon>
-            <span>文件整理</span>
-            <p class="desc">按类型、日期、大小自动整理文件</p>
+            <span>{{ t('home.action.organize') }}</span>
+            <p class="desc">{{ t('home.action.organizeDesc') }}</p>
           </div>
           <div class="action-card" @click="goTo('batch-rename')">
             <el-icon>
               <EditPen />
             </el-icon>
-            <span>批量重命名</span>
-            <p class="desc">用模板批量修改文件名</p>
+            <span>{{ t('home.action.rename') }}</span>
+            <p class="desc">{{ t('home.action.renameDesc') }}</p>
           </div>
           <div class="action-card" @click="goTo('duplicate-clean')">
             <el-icon>
               <DeleteFilled />
             </el-icon>
-            <span>重复清理</span>
-            <p class="desc">识别并清理重复文件，释放空间</p>
+            <span>{{ t('home.action.duplicates') }}</span>
+            <p class="desc">{{ t('home.action.duplicatesDesc') }}</p>
           </div>
           <div class="action-card" @click="goTo('ai-classify')">
             <el-icon>
               <MagicStick />
             </el-icon>
-            <span>AI 智能分类</span>
-            <p class="desc">AI 自动识别照片内容并分类</p>
+            <span>{{ t('home.action.aiClassify') }}</span>
+            <p class="desc">{{ t('home.action.aiClassifyDesc') }}</p>
           </div>
           <div class="action-card" @click="goTo('fix-date')">
             <el-icon>
               <Calendar />
             </el-icon>
-            <span>修复拍摄时间</span>
-            <p class="desc">修正照片错误的拍摄日期</p>
+            <span>{{ t('home.action.fixDate') }}</span>
+            <p class="desc">{{ t('home.action.fixDateDesc') }}</p>
           </div>
         </div>
       </div>
@@ -99,34 +100,37 @@
     <el-tour v-model="homeTourOpen" type="primary" :mask="true">
       <el-tour-step
         :target="workDirRef"
-        title="待处理目录"
-        description="在此添加需要整理的文件夹，可以添加多个目录。添加后右侧会显示文件统计信息。"
+        :title="t('home.workDirs.title')"
+        :description="t('home.tour.workDirs')"
       />
       <el-tour-step
         :target="outputDirRef"
-        title="输出目录"
-        description="指定文件整理后的输出位置。建议选择一个空文件夹作为输出目录。"
+        :title="t('home.outputDir.title')"
+        :description="t('home.tour.outputDir')"
       />
       <el-tour-step
         :target="quickActionsRef"
-        title="快速操作"
-        description="点击卡片快速进入对应功能。包括文件整理、批量重命名、重复文件清理和AI智能分类等强大功能。"
+        :title="t('home.quickActions.title')"
+        :description="t('home.tour.quickActions')"
       />
     </el-tour>
   </div>
 </template>
 
 <script setup lang="ts">
-import { inject, watch, ref, onMounted, type Ref } from 'vue'
+import { inject, watch, ref, computed, onMounted, type Ref } from 'vue'
 import { open } from '@tauri-apps/plugin-dialog'
 import { FolderOpened, EditPen, DeleteFilled, MagicStick, Calendar, Plus, Close } from '@element-plus/icons-vue'
 import { useFileOps } from '@/composables/useFileOps'
+import { t } from '@/i18n'
 import type { WorkDirectory, FunctionPanel, DirectoryStats } from '@/types'
 
 const activePanel = inject<Ref<FunctionPanel>>('activePanel')!
 const workDirs = inject<Ref<WorkDirectory[]>>('workDirs')!
 const outputDir = inject<Ref<string>>('outputDir')!
 const dirStats = inject<Ref<DirectoryStats | null>>('dirStats')!
+
+const outputDirName = computed(() => outputDir.value.split(/[/\\]/).pop() || outputDir.value)
 
 const workDirRef = ref<HTMLElement>()
 const outputDirRef = ref<HTMLElement>()
@@ -155,7 +159,7 @@ async function selectWorkDirs() {
     const selected = await open({
       directory: true,
       multiple: true,
-      title: '选择待处理目录',
+      title: t('home.dialog.selectWorkDirs'),
     })
     if (selected) {
       const paths = Array.isArray(selected) ? selected : [selected]
@@ -183,7 +187,7 @@ async function selectOutputDir() {
     const selected = await open({
       directory: true,
       multiple: false,
-      title: '选择输出目录',
+      title: t('home.dialog.selectOutputDir'),
     })
     if (selected) {
       outputDir.value = selected as string
@@ -222,7 +226,7 @@ watch(workDirs, async (dirs) => {
   display: flex;
   flex-direction: column;
   padding: 24px;
-  background: #18191C;
+  background: var(--bg);
   overflow-y: auto;
 }
 
@@ -246,11 +250,11 @@ watch(workDirs, async (dirs) => {
 .section-title {
   font-size: 13px;
   font-weight: 500;
-  color: #C8D0DC;
+  color: var(--text-secondary);
 }
 
 .directory-list {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   padding: 12px;
   min-height: 80px;
@@ -263,7 +267,7 @@ watch(workDirs, async (dirs) => {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 6px;
   margin-bottom: 8px;
 }
@@ -273,19 +277,19 @@ watch(workDirs, async (dirs) => {
 }
 
 .directory-item .el-icon {
-  color: #3A86FF;
+  color: var(--primary);
   font-size: 16px;
 }
 
 .dir-name {
   font-size: 13px;
-  color: #E0E6ED;
+  color: var(--text);
   font-weight: 500;
 }
 
 .dir-path {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -293,12 +297,12 @@ watch(workDirs, async (dirs) => {
 }
 
 .remove-btn {
-  color: #8A94A6;
+  color: var(--text-muted);
   padding: 8px !important;
 }
 
 .remove-btn:hover {
-  color: #E81123 !important;
+  color: var(--danger) !important;
 }
 
 .empty-area {
@@ -308,17 +312,17 @@ watch(workDirs, async (dirs) => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 2px dashed #3A3B40;
+  border: 2px dashed var(--border);
   border-radius: 6px;
-  color: #8A94A6;
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s;
   padding: 20px;
 }
 
 .empty-area:hover {
-  border-color: #3A86FF;
-  color: #3A86FF;
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .empty-area .el-icon {
@@ -345,32 +349,32 @@ watch(workDirs, async (dirs) => {
   flex-direction: column;
   align-items: center;
   padding: 20px 16px;
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .action-card:hover {
-  background: #2A2B30;
+  background: var(--panel-2);
 }
 
 .action-card .el-icon {
   font-size: 32px;
-  color: #3A86FF;
+  color: var(--primary);
   margin-bottom: 12px;
 }
 
 .action-card span {
   font-size: 13px;
-  color: #E0E6ED;
+  color: var(--text);
   font-weight: 500;
   margin-bottom: 6px;
 }
 
 .action-card .desc {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
   text-align: center;
   line-height: 1.5;
 }

@@ -13,17 +13,6 @@ pub struct FileEntry {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct FileDetail {
-    pub name: String,
-    pub path: String,
-    pub format: String,
-    pub size: u64,
-    pub modified: String,
-    pub created: String,
-    pub is_dir: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ExifInfo {
     pub has_exif: bool,
     pub camera_make: Option<String>,
@@ -52,14 +41,6 @@ pub struct GpsLocation {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct FileDetailInfo {
-    pub basic: FileDetail,
-    pub exif: Option<ExifInfo>,
-    pub gps: Option<GpsLocation>,
-    pub ai_tags: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LogEntry {
     pub id: String,
     pub timestamp: String,
@@ -83,14 +64,6 @@ pub struct BatchOperationResult {
     pub success_count: usize,
     pub fail_count: usize,
     pub results: Vec<OperationResult>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct DirEntry {
-    pub name: String,
-    pub path: String,
-    pub is_dir: bool,
-    pub children: Option<Vec<DirEntry>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -216,8 +189,22 @@ pub struct TaskProgress {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImageProcessResult {
+    pub source_path: String,
+    pub target_path: String,
+    pub success: bool,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CancelResult {
     pub cancelled: bool,
     pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppSettings {
+    pub log_retention_days: u32,
+    pub log_dir: String,
 }
 

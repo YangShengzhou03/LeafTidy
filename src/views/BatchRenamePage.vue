@@ -1,52 +1,52 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2>批量重命名</h2>
-      <p class="desc">用灵活模板批量修改文件名，让文件命名更规范</p>
+      <h2>{{ t('rename.title') }}</h2>
+      <p class="desc">{{ t('rename.desc') }}</p>
     </div>
     <div class="page-content">
       <div class="config-panel">
         <div class="config-row">
           <div class="config-item">
-            <label>时间数据来源</label>
-            <el-select v-model="timeSource" placeholder="选择时间来源" style="width: 150px">
-              <el-option label="修改时间" value="modified" />
-              <el-option label="创建时间" value="created" />
-              <el-option label="拍摄日期" value="taken" />
+            <label>{{ t('rename.timeSourceLabel') }}</label>
+            <el-select v-model="timeSource" :placeholder="t('rename.timeSourcePlaceholder')" style="width: 150px">
+              <el-option :label="t('rename.timeSourceModified')" value="modified" />
+              <el-option :label="t('rename.timeSourceCreated')" value="created" />
+              <el-option :label="t('rename.timeSourceTaken')" value="taken" />
             </el-select>
-            <span class="hint">用于日期、年份、月份、时间等标签</span>
+            <span class="hint">{{ t('rename.timeSourceHint') }}</span>
           </div>
           <div class="config-item">
-            <label>序号起始值</label>
+            <label>{{ t('rename.startIndexLabel') }}</label>
             <el-input-number v-model="startIndex" :min="1" :max="9999" controls-position="right" style="width: 120px" />
           </div>
         </div>
         <div class="config-item">
-          <label>命名标签（点击添加，可重复选择）</label>
+          <label>{{ t('rename.tagsLabel') }}</label>
           <div class="tag-selector">
             <div class="tag-grid">
               <div v-for="tag in availableTags" :key="tag.value" class="tag-chip" @click="addTag(tag.value)">
                 <el-icon>
                   <component :is="tag.icon" />
                 </el-icon>
-                <span>{{ tag.label }}</span>
+                <span>{{ t(tag.label) }}</span>
               </div>
             </div>
             <div class="separator-grid">
               <div v-for="sep in separators" :key="sep.value" class="sep-chip" @click="addSeparator(sep.value)">
-                <span>{{ sep.label }}</span>
+                <span>{{ t(sep.label) }}</span>
               </div>
             </div>
           </div>
         </div>
         <div class="config-item" v-if="templateParts.length > 0">
-          <label>当前模板（点击移除）</label>
+          <label>{{ t('rename.currentTemplateLabel') }}</label>
           <div class="template-builder">
             <div class="template-segments">
               <div v-for="(part, index) in templateParts" :key="index" class="template-part"
                 :class="{ separator: part.type === 'separator' }" @click="removePart(index)">
                 <span v-if="part.type === 'separator'" class="part-sep">{{ part.value }}</span>
-                <span v-else class="part-tag">{{ part.label }}</span>
+                <span v-else class="part-tag">{{ t(part.label) }}</span>
                 <el-icon class="part-remove">
                   <Close />
                 </el-icon>
@@ -65,16 +65,16 @@
       <!-- 进度显示区域 -->
       <div class="progress-panel" v-if="renaming">
         <div class="progress-header">
-          <span class="progress-title">正在重命名文件</span>
+          <span class="progress-title">{{ t('rename.progressTitle') }}</span>
           <span class="progress-percent">{{ progress.percentage.toFixed(1) }}%</span>
         </div>
         <el-progress :percentage="progress.percentage" :stroke-width="12" :show-text="false" class="progress-bar" />
         <div class="progress-stats">
-          <span>总数: {{ progress.total }}</span>
-          <span>已处理: {{ progress.processed }}</span>
+          <span>{{ t('rename.progressTotal', { n: progress.total }) }}</span>
+          <span>{{ t('rename.progressProcessed', { n: progress.processed }) }}</span>
         </div>
         <div class="progress-current" v-if="progress.current_item">
-          <span class="current-label">当前:</span>
+          <span class="current-label">{{ t('rename.progressCurrentLabel') }}</span>
           <span class="current-file">{{ progress.current_item }}</span>
         </div>
       </div>
@@ -82,17 +82,17 @@
       <div class="action-bar">
         <el-button v-if="!renaming" type="primary" :disabled="templateParts.length === 0 || workDirs.length === 0"
           @click="startRename">
-          开始重命名
+          {{ t('rename.startButton') }}
         </el-button>
         <el-button v-else type="danger" @click="stopRename">
-          终止重命名
+          {{ t('rename.stopButton') }}
         </el-button>
       </div>
       <div class="result-panel" v-if="results.length > 0">
         <div class="result-header">
-          <span class="result-title">重命名结果</span>
+          <span class="result-title">{{ t('rename.resultTitle') }}</span>
           <span class="result-stats">
-            成功: {{ successCount }} / 失败: {{ failCount }}
+            {{ t('rename.resultStats', { success: successCount, fail: failCount }) }}
           </span>
         </div>
         <div class="result-section" v-if="failResults.length > 0">
@@ -100,7 +100,7 @@
             <el-icon>
               <CircleCloseFilled />
             </el-icon>
-            <span>失败 {{ failCount }} 个</span>
+            <span>{{ t('rename.failCountLabel', { n: failCount }) }}</span>
           </div>
           <div class="result-list">
             <div v-for="(result, index) in failResults" :key="'fail-' + index" class="result-item fail">
@@ -117,7 +117,7 @@
             <el-icon>
               <SuccessFilled />
             </el-icon>
-            <span>成功 {{ successCount }} 个</span>
+            <span>{{ t('rename.successCountLabel', { n: successCount }) }}</span>
           </div>
           <div class="result-list">
             <div v-for="(result, index) in successResults" :key="'success-' + index" class="result-item success">
@@ -139,11 +139,12 @@
 
 <script setup lang="ts">
 import { ref, computed, inject, type Ref, onMounted, onUnmounted } from 'vue'
-import { ElMessage, ElNotification } from 'element-plus'
+import { ElNotification } from 'element-plus'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { Document, Calendar, Clock, Camera, VideoCamera, Sort, Close, SuccessFilled, CircleCloseFilled, MapLocation, Location, Files, Coin } from '@element-plus/icons-vue'
 import { useFileOps } from '@/composables/useFileOps'
+import { t } from '@/i18n'
 import { useLog, type RenameLogOptions, type FileResult } from '@/composables/useLog'
 import type { WorkDirectory, RenameResult, RenameRule, TaskProgress, CancelResult } from '@/types'
 
@@ -186,6 +187,7 @@ function loadState() {
       if (state.timeSource) timeSource.value = state.timeSource
     }
   } catch {
+    // 状态加载失败时使用默认值
   }
 }
 
@@ -197,6 +199,7 @@ function saveState() {
       timeSource: timeSource.value,
     }))
   } catch {
+    // 保存失败时忽略
   }
 }
 
@@ -215,28 +218,28 @@ onUnmounted(() => {
 })
 
 const availableTags = [
-  { value: 'date', label: '日期', icon: Calendar },
-  { value: 'time', label: '时间', icon: Clock },
-  { value: 'year', label: '年份', icon: Calendar },
-  { value: 'month', label: '月份', icon: Clock },
-  { value: 'day', label: '日', icon: Calendar },
-  { value: 'type', label: '文件类型', icon: Document },
-  { value: 'name', label: '原文件名', icon: Document },
-  { value: 'ext', label: '扩展名', icon: Files },
-  { value: 'index', label: '序号', icon: Sort },
-  { value: 'province', label: '省份', icon: MapLocation },
-  { value: 'city', label: '城市', icon: Location },
-  { value: 'district', label: '区县', icon: Location },
-  { value: 'place', label: '地点', icon: Location },
-  { value: 'make', label: '相机品牌', icon: Camera },
-  { value: 'model', label: '相机型号', icon: VideoCamera },
-  { value: 'exact_size', label: '文件大小', icon: Coin },
+  { value: 'date', label: 'rename.tag.date', icon: Calendar },
+  { value: 'time', label: 'rename.tag.time', icon: Clock },
+  { value: 'year', label: 'rename.tag.year', icon: Calendar },
+  { value: 'month', label: 'rename.tag.month', icon: Clock },
+  { value: 'day', label: 'rename.tag.day', icon: Calendar },
+  { value: 'type', label: 'rename.tag.type', icon: Document },
+  { value: 'name', label: 'rename.tag.name', icon: Document },
+  { value: 'ext', label: 'rename.tag.ext', icon: Files },
+  { value: 'index', label: 'rename.tag.index', icon: Sort },
+  { value: 'province', label: 'rename.tag.province', icon: MapLocation },
+  { value: 'city', label: 'rename.tag.city', icon: Location },
+  { value: 'district', label: 'rename.tag.district', icon: Location },
+  { value: 'place', label: 'rename.tag.place', icon: Location },
+  { value: 'make', label: 'rename.tag.make', icon: Camera },
+  { value: 'model', label: 'rename.tag.model', icon: VideoCamera },
+  { value: 'exact_size', label: 'rename.tag.exact_size', icon: Coin },
 ]
 
 const separators = [
   { value: '_', label: '_' },
   { value: '-', label: '-' },
-  { value: ' ', label: '空格' },
+  { value: ' ', label: 'rename.tag.space' },
   { value: '.', label: '.' },
 ]
 
@@ -273,14 +276,14 @@ const previewName = computed(() => {
     year: '2024',
     month: '01',
     day: '15',
-    type: '图片',
+    type: t('rename.example.type'),
     name: 'photo',
     ext: 'jpg',
     index: String(startIndex.value).padStart(3, '0'),
-    province: '江西省',
-    city: '南昌市',
-    district: '红谷滩区',
-    place: '江西科技师范大学',
+    province: t('rename.example.province'),
+    city: t('rename.example.city'),
+    district: t('rename.example.district'),
+    place: t('rename.example.place'),
     make: 'Canon',
     model: 'EOSR5',
     exact_size: '2.5MB',
@@ -291,7 +294,7 @@ const previewName = computed(() => {
     }
     return examples[part.value] || part.value
   }).join('')
-  return result || '点击标签构建模板'
+  return result || t('rename.previewEmpty')
 })
 
 const successCount = computed(() => results.value.filter(r => r.success).length)
@@ -302,23 +305,23 @@ const failResults = computed(() => results.value.filter(r => !r.success))
 async function stopRename() {
   try {
     await invoke<CancelResult>('cancel_operation')
-    ElNotification({ type: 'info', title: '提示', message: '正在终止重命名操作...' })
+    ElNotification({ type: 'info', title: t('rename.notif.infoTitle'), message: t('rename.stopInProgress') })
   } catch (e: any) {
-    ElNotification({ type: 'error', title: '错误', message: `终止失败: ${e}` })
+    ElNotification({ type: 'error', title: t('rename.notif.errorTitle'), message: t('rename.stopFailed', { msg: e }) })
   }
 }
 
 async function startRename() {
   if (templateParts.value.length === 0) {
-    ElNotification({ type: 'warning', title: '警告', message: '请先构建命名模板' })
+    ElNotification({ type: 'warning', title: t('rename.notif.warningTitle'), message: t('rename.warnNoTemplate') })
     return
   }
   if (workDirs.value.length === 0) {
-    ElNotification({ type: 'warning', title: '警告', message: '请先选择待处理目录' })
+    ElNotification({ type: 'warning', title: t('rename.notif.warningTitle'), message: t('rename.warnNoWorkDir') })
     return
   }
   if (!outputDir.value) {
-    ElNotification({ type: 'warning', title: '警告', message: '请先选择输出目录' })
+    ElNotification({ type: 'warning', title: t('rename.notif.warningTitle'), message: t('rename.warnNoOutputDir') })
     return
   }
 
@@ -332,8 +335,8 @@ async function startRename() {
     percentage: 0
   }
 
+  const paths: string[] = []
   try {
-    const paths: string[] = []
     for (const dir of workDirs.value) {
       const files = await invoke<{ path: string }[]>('scan_directory', { path: dir.path })
       paths.push(...files.map(f => f.path))
@@ -373,21 +376,21 @@ async function startRename() {
       const success = res.filter(r => r.success).length
       const fail = res.filter(r => !r.success).length
       if (fail === 0) {
-        ElNotification({ type: 'success', title: '成功', message: `重命名完成，共处理 ${success} 个文件，已复制到输出目录` })
+        ElNotification({ type: 'success', title: t('rename.notif.successTitle'), message: t('rename.allSuccess', { n: success }) })
       } else {
-        ElNotification({ type: 'warning', title: '警告', message: `重命名完成，成功 ${success} 个，失败 ${fail} 个` })
+        ElNotification({ type: 'warning', title: t('rename.notif.warningTitle'), message: t('rename.partialSuccess', { success, fail }) })
       }
     } else {
-      ElNotification({ type: 'info', title: '提示', message: '没有找到需要重命名的文件' })
+      ElNotification({ type: 'info', title: t('rename.notif.infoTitle'), message: t('rename.noFiles') })
     }
   } catch (e: any) {
     const errMsg = String(e)
     if (errMsg.includes('取消')) {
-      const sourcePathsStr = files.value.map(f => f.path).join(', ')
-      await logCancelledOperation('rename', sourcePathsStr, `源文件数: ${files.value.length}`)
-      ElNotification({ type: 'info', title: '提示', message: '重命名操作已取消' })
+      const sourcePathsStr = paths.join(', ')
+      await logCancelledOperation('rename', sourcePathsStr, `源文件数: ${paths.length}`)
+      ElNotification({ type: 'info', title: t('rename.notif.infoTitle'), message: t('rename.cancelled') })
     } else {
-      ElNotification({ type: 'error', title: '错误', message: `重命名失败: ${errMsg}` })
+      ElNotification({ type: 'error', title: t('rename.notif.errorTitle'), message: t('rename.failed', { msg: errMsg }) })
     }
   } finally {
     renaming.value = false
@@ -399,7 +402,7 @@ async function startRename() {
 <style scoped>
 .page-container {
   height: 100%;
-  background: #18191C;
+  background: var(--bg);
   padding: 24px;
   overflow-y: auto;
 }
@@ -411,17 +414,17 @@ async function startRename() {
 .page-header h2 {
   font-size: 16px;
   font-weight: 500;
-  color: #E0E6ED;
+  color: var(--text);
   margin-bottom: 6px;
 }
 
 .page-header .desc {
   font-size: 13px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .config-panel {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
@@ -448,19 +451,19 @@ async function startRename() {
 .config-item label {
   display: block;
   font-size: 13px;
-  color: #C8D0DC;
+  color: var(--text-secondary);
   margin-bottom: 12px;
   font-weight: 500;
 }
 
 .config-item .hint {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
   margin-left: 12px;
 }
 
 .tag-selector {
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 8px;
   padding: 16px;
 }
@@ -477,25 +480,25 @@ async function startRename() {
   align-items: center;
   gap: 6px;
   padding: 10px 12px;
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 6px;
-  border: 1px solid #3A3B40;
+  border: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .tag-chip:hover {
-  background: #353639;
+  background: var(--panel-2-hover);
 }
 
 .tag-chip .el-icon {
   font-size: 14px;
-  color: #C8D0DC;
+  color: var(--text-secondary);
 }
 
 .tag-chip span {
   font-size: 13px;
-  color: #C8D0DC;
+  color: var(--text-secondary);
 }
 
 .separator-grid {
@@ -508,24 +511,24 @@ async function startRename() {
   align-items: center;
   justify-content: center;
   padding: 8px 16px;
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 6px;
-  border: 1px solid #3A3B40;
+  border: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .sep-chip:hover {
-  background: #353639;
+  background: var(--panel-2-hover);
 }
 
 .sep-chip span {
   font-size: 13px;
-  color: #C8D0DC;
+  color: var(--text-secondary);
 }
 
 .template-builder {
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 8px;
   padding: 16px;
 }
@@ -542,7 +545,7 @@ async function startRename() {
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: #3A86FF;
+  background: var(--primary);
   border-radius: 6px;
   cursor: pointer;
   user-select: none;
@@ -550,7 +553,7 @@ async function startRename() {
 }
 
 .template-part.separator {
-  background: #5A5F6A;
+  background: var(--border-strong);
 }
 
 .template-part:hover {
@@ -559,17 +562,17 @@ async function startRename() {
 
 .part-tag {
   font-size: 13px;
-  color: #FFFFFF;
+  color: var(--white);
 }
 
 .part-sep {
   font-size: 13px;
-  color: #E0E6ED;
+  color: var(--text);
 }
 
 .part-remove {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(var(--white-rgb), 0.7);
 }
 
 .template-preview {
@@ -577,29 +580,29 @@ async function startRename() {
   align-items: center;
   gap: 8px;
   padding: 12px;
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 6px;
-  border: 1px dashed #3A3B40;
+  border: 1px dashed var(--border);
 }
 
 .template-preview .el-icon {
   font-size: 16px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .preview-text {
   font-size: 13px;
-  color: #3A86FF;
+  color: var(--primary);
   word-break: break-all;
 }
 
 .ext-hint {
-  color: #8A94A6;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
 .progress-panel {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
@@ -615,13 +618,13 @@ async function startRename() {
 .progress-title {
   font-size: 14px;
   font-weight: 500;
-  color: #E0E6ED;
+  color: var(--text);
 }
 
 .progress-percent {
   font-size: 16px;
   font-weight: 600;
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 .progress-bar {
@@ -632,7 +635,7 @@ async function startRename() {
   display: flex;
   gap: 16px;
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .progress-current {
@@ -641,19 +644,19 @@ async function startRename() {
   gap: 8px;
   margin-top: 12px;
   padding: 8px 12px;
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 6px;
 }
 
 .current-label {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
 .current-file {
   font-size: 12px;
-  color: #E0E6ED;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -666,7 +669,7 @@ async function startRename() {
 }
 
 .result-panel {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   padding: 16px;
 }
@@ -702,24 +705,24 @@ async function startRename() {
 }
 
 .fail-label {
-  background: rgba(232, 17, 35, 0.15);
-  color: #E81123;
+  background: rgba(var(--danger-rgb), 0.15);
+  color: var(--danger);
 }
 
 .success-label {
-  background: rgba(82, 196, 26, 0.15);
-  color: #52C41A;
+  background: rgba(var(--success-rgb), 0.15);
+  color: var(--success);
 }
 
 .result-title {
   font-size: 13px;
   font-weight: 500;
-  color: #C8D0DC;
+  color: var(--text-secondary);
 }
 
 .result-stats {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .result-list {
@@ -735,7 +738,7 @@ async function startRename() {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 6px;
 }
 
@@ -745,16 +748,16 @@ async function startRename() {
 }
 
 .result-item.success .el-icon {
-  color: #52C41A;
+  color: var(--success);
 }
 
 .result-item.fail .el-icon {
-  color: #E81123;
+  color: var(--danger);
 }
 
 .result-name {
   font-size: 12px;
-  color: #E0E6ED;
+  color: var(--text);
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -768,18 +771,18 @@ async function startRename() {
 }
 
 .result-name.clickable:hover {
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 .result-arrow {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
 .result-target {
   font-size: 12px;
-  color: #3A86FF;
+  color: var(--primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -797,7 +800,7 @@ async function startRename() {
 
 .result-item .result-error-inline {
   font-size: 12px;
-  color: #E81123;
+  color: var(--danger);
   flex-shrink: 0;
   margin-left: auto;
 }

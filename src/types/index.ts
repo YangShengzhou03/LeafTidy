@@ -1,63 +1,3 @@
-export interface FileEntry {
-  name: string
-  path: string
-  is_dir: boolean
-  size: number
-  format: string
-  modified: string
-  created: string
-}
-
-export interface DirEntry {
-  name: string
-  path: string
-  is_dir: boolean
-  children?: DirEntry[]
-}
-
-export interface FileDetail {
-  name: string
-  path: string
-  format: string
-  size: number
-  modified: string
-  created: string
-  is_dir: boolean
-}
-
-export interface ExifInfo {
-  has_exif: boolean
-  camera_make?: string
-  camera_model?: string
-  date_taken?: string
-  gps_latitude?: number
-  gps_longitude?: number
-  gps_altitude?: number
-  width?: number
-  height?: number
-  orientation?: number
-  iso?: number
-  focal_length?: string
-  aperture?: string
-  shutter_speed?: string
-}
-
-export interface GpsLocation {
-  latitude: number
-  longitude: number
-  province?: string
-  city?: string
-  district?: string
-  place?: string
-}
-
-export interface FileDetailInfo {
-  basic: FileDetail
-  exif?: ExifInfo
-  gps?: GpsLocation
-  ai_tags: string[]
-}
-
 export interface LogEntry {
   id: string
   timestamp: string
@@ -87,11 +27,6 @@ export interface DirectoryStats {
   file_types: Record<string, number>
   oldest_file?: string
   newest_file?: string
-}
-
-export interface OrganizeRule {
-  tags: string[]
-  time_source: string
 }
 
 export interface OrganizeResult {
@@ -185,6 +120,13 @@ export interface OperationResult {
   error?: string
 }
 
+export interface ImageProcessResult {
+  source_path: string
+  target_path: string
+  success: boolean
+  error?: string
+}
+
 export type FunctionPanel =
   | 'home'
   | 'file-organize'
@@ -200,6 +142,7 @@ export type FunctionPanel =
   | 'settings'
   | 'privacy-policy'
   | 'license-agreement'
+  | 'about'
 
 export interface PageState {
   [key: string]: any

@@ -1,15 +1,15 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2>AI 智能分类</h2>
-      <p class="desc">使用本地AI模型自动识别照片内容并分类</p>
+      <h2>{{ t('ai.title') }}</h2>
+      <p class="desc">{{ t('ai.desc') }}</p>
     </div>
     <div class="page-content">
       <div class="coming-soon">
         <el-icon class="soon-icon">
           <Clock />
         </el-icon>
-        <span class="soon-text">功能开发中，敬请期待</span>
+        <span class="soon-text">{{ t('ai.comingSoon') }}</span>
       </div>
     </div>
   </div>
@@ -17,12 +17,13 @@
 
 <script setup lang="ts">
 import { Clock } from '@element-plus/icons-vue'
+import { t } from '@/i18n'
 </script>
 
 <style scoped>
 .page-container {
   height: 100%;
-  background: #18191C;
+  background: var(--bg);
   padding: 24px;
   overflow-y: auto;
 }
@@ -34,13 +35,13 @@ import { Clock } from '@element-plus/icons-vue'
 .page-header h2 {
   font-size: 16px;
   font-weight: 500;
-  color: #E0E6ED;
+  color: var(--text);
   margin-bottom: 6px;
 }
 
 .page-header .desc {
   font-size: 13px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .page-content {
@@ -56,17 +57,17 @@ import { Clock } from '@element-plus/icons-vue'
   align-items: center;
   gap: 16px;
   padding: 40px;
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 12px;
 }
 
 .soon-icon {
   font-size: 48px;
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 .soon-text {
   font-size: 14px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 </style>

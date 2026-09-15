@@ -67,19 +67,6 @@ export function useLog() {
     }
   }
 
-  function formatTimestamp(): string {
-    const now = new Date()
-    return now.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    }) + '.' + now.getMilliseconds().toString().padStart(3, '0')
-  }
-
   function formatSettings(options: OrganizeLogOptions | RenameLogOptions, operationType: string): string {
     const lines: string[] = []
     lines.push('用户设置参数：')
@@ -178,7 +165,7 @@ export function useLog() {
     lines.push(`详细文件列表：`)
     lines.push(``)
     
-    results.forEach((r, index) => {
+    results.forEach((r) => {
       const status = r.success ? '成功' : '失败'
       const metaInfo = formatMetadata(r.metadata, r.process_time_ms)
       
@@ -283,6 +270,31 @@ export function useLog() {
     })
   }
 
+  async function logImageProcessResults(
+    operationType: string,
+    results: FileResult[],
+    options: { params: Record<string, string>; targetDir?: string },
+  ): Promise<void> {
+    const successCount = results.filter(r => r.success).length
+    const failCount = results.filter(r => !r.success).length
+    const status: 'success' | 'fail' = failCount === 0 ? 'success' : (successCount > 0 ? 'success' : 'fail')
+
+    const lines: string[] = ['用户设置参数：']
+    for (const [key, value] of Object.entries(options.params)) {
+      lines.push(`  ${key}: ${value}`)
+    }
+    lines.push('')
+    lines.push(formatFileList(results, 'image_process', options.targetDir))
+
+    await writeLog({
+      operation_type: operationType,
+      source_path: `共处理${results.length}个文件`,
+      target_path: options.targetDir,
+      status,
+      detail: lines.join('\n'),
+    })
+  }
+
   function extractCommonDir(paths: string[]): string | null {
     if (paths.length === 0) return null
     if (paths.length === 1) {
@@ -328,6 +340,7 @@ export function useLog() {
     logRenameResults,
     logDuplicateCleanResults,
     logCleanupResults,
+    logImageProcessResults,
     logCancelledOperation,
   }
 }

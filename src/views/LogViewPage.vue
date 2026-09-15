@@ -1,47 +1,47 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2>操作日志</h2>
-      <p class="desc">查看所有操作记录，支持按类型筛选和详情查看</p>
+      <h2>{{ t('logs.title') }}</h2>
+      <p class="desc">{{ t('logs.desc') }}</p>
     </div>
     <div class="page-content">
       <div class="filter-bar">
         <div class="filter-left">
-          <el-select v-model="filterType" placeholder="全部类型" clearable style="width: 160px">
-            <el-option label="全部类型" value="" />
-            <el-option label="文件整理" value="organize" />
-            <el-option label="批量重命名" value="rename" />
-            <el-option label="重复清理" value="duplicate_clean" />
-            <el-option label="附属清理" value="cleanup" />
+          <el-select v-model="filterType" :placeholder="t('logs.filter.all')" clearable style="width: 160px">
+            <el-option :label="t('logs.filter.all')" value="" />
+            <el-option :label="t('logs.op.organize')" value="organize" />
+            <el-option :label="t('logs.op.rename')" value="rename" />
+            <el-option :label="t('logs.op.duplicate_clean')" value="duplicate_clean" />
+            <el-option :label="t('logs.op.cleanup')" value="cleanup" />
           </el-select>
-          <el-button @click="loadLogs">查询</el-button>
+          <el-button @click="loadLogs">{{ t('logs.query') }}</el-button>
         </div>
-        <el-button type="danger" @click="clearAllLogs" v-show="logs.length > 0">清空</el-button>
+        <el-button type="danger" @click="clearAllLogs" v-show="logs.length > 0">{{ t('logs.clear') }}</el-button>
       </div>
       <div class="log-list">
-        <el-table :data="logs" style="width: 100%" empty-text="暂无日志记录">
-          <el-table-column prop="timestamp" label="时间" width="180" />
-          <el-table-column prop="operation_type" label="类型" width="100">
+        <el-table :data="logs" style="width: 100%" :empty-text="t('logs.empty')">
+          <el-table-column prop="timestamp" :label="t('logs.col.time')" width="180" />
+          <el-table-column prop="operation_type" :label="t('logs.col.type')" width="100">
             <template #default="{ row }">
               {{ getOperationTypeLabel(row.operation_type) }}
             </template>
           </el-table-column>
-          <el-table-column prop="source_path" label="处理路径" min-width="200" show-overflow-tooltip />
-          <el-table-column prop="target_path" label="目标路径" min-width="200" show-overflow-tooltip>
+          <el-table-column prop="source_path" :label="t('logs.col.sourcePath')" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="target_path" :label="t('logs.col.targetPath')" min-width="200" show-overflow-tooltip>
             <template #default="{ row }">
               {{ row.target_path || '-' }}
             </template>
           </el-table-column>
-          <el-table-column prop="status" label="状态" width="80">
+          <el-table-column prop="status" :label="t('logs.col.status')" width="80">
             <template #default="{ row }">
               <span :class="['status-tag', row.status]">{{ getStatusLabel(row.status) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="160" fixed="right">
+          <el-table-column :label="t('logs.col.actions')" width="160" fixed="right">
             <template #default="{ row }">
               <div class="op-buttons">
-                <el-button text @click="viewLogDetail(row)">查看</el-button>
-                <el-button text type="danger" @click="deleteLog(row)">删除</el-button>
+                <el-button text @click="viewLogDetail(row)">{{ t('logs.action.view') }}</el-button>
+                <el-button text type="danger" @click="deleteLog(row)">{{ t('logs.action.delete') }}</el-button>
               </div>
             </template>
           </el-table-column>
@@ -54,7 +54,8 @@
 <script setup lang="ts">
 import { ref, inject, onMounted, type Ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-import { ElMessageBox, ElMessage, ElNotification } from 'element-plus'
+import { ElMessageBox, ElNotification } from 'element-plus'
+import { t } from '@/i18n'
 import type { LogEntry, FunctionPanel } from '@/types'
 
 const activePanel = inject<Ref<FunctionPanel>>('activePanel')!
@@ -81,44 +82,46 @@ function viewLogDetail(log: LogEntry) {
 }
 
 function getOperationTypeLabel(type: string): string {
-  const labels: Record<string, string> = {
-    organize: '文件整理',
-    rename: '批量重命名',
-    duplicate_clean: '重复清理',
-    cleanup: '附属清理',
-    move: '移动',
-    copy: '复制',
-    delete: '删除',
+  const keys: Record<string, string> = {
+    organize: 'logs.op.organize',
+    rename: 'logs.op.rename',
+    duplicate_clean: 'logs.op.duplicate_clean',
+    cleanup: 'logs.op.cleanup',
+    move: 'logs.op.move',
+    copy: 'logs.op.copy',
+    delete: 'logs.op.delete',
   }
-  return labels[type] || type
+  const key = keys[type]
+  return key ? t(key) : type
 }
 
 function getStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    success: '成功',
-    fail: '失败',
-    cancelled: '已取消',
+  const keys: Record<string, string> = {
+    success: 'logs.status.success',
+    fail: 'logs.status.fail',
+    cancelled: 'logs.status.cancelled',
   }
-  return labels[status] || status
+  const key = keys[status]
+  return key ? t(key) : status
 }
 
 async function clearAllLogs() {
   try {
     await ElMessageBox.confirm(
-      '确定要清空所有日志吗？此操作不可恢复。',
-      '确认清空',
+      t('logs.confirm.clearMessage'),
+      t('logs.confirm.clearTitle'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('logs.confirm.ok'),
+        cancelButtonText: t('logs.confirm.cancel'),
         type: 'warning',
       }
     )
     await invoke<number>('clear_all_logs')
-    ElNotification({ type: 'success', title: '成功', message: '日志已清空' })
+    ElNotification({ type: 'success', title: t('logs.status.success'), message: t('logs.cleared') })
     logs.value = []
   } catch (e) {
     if (e !== 'cancel' && e !== 'close') {
-      console.error('清空日志失败:', e)
+      console.error('Failed to clear logs:', e)
     }
   }
 }
@@ -126,22 +129,22 @@ async function clearAllLogs() {
 async function deleteLog(log: LogEntry) {
   try {
     await ElMessageBox.confirm(
-      '确定要删除这条日志吗？',
-      '确认删除',
+      t('logs.confirm.deleteMessage'),
+      t('logs.confirm.deleteTitle'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('logs.confirm.ok'),
+        cancelButtonText: t('logs.confirm.cancel'),
         type: 'warning',
       }
     )
     const success = await invoke<boolean>('delete_log', { logId: log.id })
     if (success) {
-      ElNotification({ type: 'success', title: '成功', message: '日志已删除' })
+      ElNotification({ type: 'success', title: t('logs.status.success'), message: t('logs.deleted') })
       logs.value = logs.value.filter(l => l.id !== log.id)
     }
   } catch (e) {
     if (e !== 'cancel' && e !== 'close') {
-      console.error('删除日志失败:', e)
+      console.error('Failed to delete log:', e)
     }
   }
 }
@@ -152,7 +155,7 @@ onMounted(loadLogs)
 <style scoped>
 .page-container {
   height: 100%;
-  background: #18191C;
+  background: var(--bg);
   padding: 24px;
   overflow-y: auto;
 }
@@ -164,13 +167,13 @@ onMounted(loadLogs)
 .page-header h2 {
   font-size: 16px;
   font-weight: 500;
-  color: #E0E6ED;
+  color: var(--text);
   margin-bottom: 6px;
 }
 
 .page-header .desc {
   font-size: 13px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .filter-bar {
@@ -192,7 +195,7 @@ onMounted(loadLogs)
 }
 
 .log-list {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   padding: 16px;
 }
@@ -206,17 +209,17 @@ onMounted(loadLogs)
 }
 
 .status-tag.success {
-  background: rgba(82, 196, 26, 0.15);
-  color: #52C41A;
+  background: rgba(var(--success-rgb), 0.15);
+  color: var(--success);
 }
 
 .status-tag.fail {
-  background: rgba(232, 17, 35, 0.15);
-  color: #E81123;
+  background: rgba(var(--danger-rgb), 0.15);
+  color: var(--danger);
 }
 
 .status-tag.cancelled {
-  background: rgba(250, 173, 20, 0.15);
-  color: #FAAD14;
+  background: rgba(var(--warning-rgb), 0.15);
+  color: var(--warning);
 }
 </style>

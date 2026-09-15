@@ -11,19 +11,9 @@ pub struct AppState {
 }
 
 #[tauri::command]
-pub fn list_directory(path: String) -> Result<Vec<FileEntry>, String> {
-    file_ops::list_directory(&path)
-}
-
-#[tauri::command]
 pub fn scan_directory(path: String) -> Result<Vec<FileEntry>, String> {
     let path_buf = std::path::PathBuf::from(&path);
     file_ops::scan_directory(&path_buf)
-}
-
-#[tauri::command]
-pub fn list_subdirs(path: String) -> Result<Vec<DirEntry>, String> {
-    file_ops::list_subdirs(&path)
 }
 
 #[tauri::command]
@@ -32,118 +22,14 @@ pub fn get_directory_stats(paths: Vec<String>) -> Result<DirectoryStats, String>
 }
 
 #[tauri::command]
-pub fn rename_file_command(source: String, new_name: String) -> Result<String, String> {
-    file_ops::rename_file(&source, &new_name)
-}
-
-#[tauri::command]
-pub fn delete_to_trash(paths: Vec<String>) -> BatchOperationResult {
-    file_ops::delete_to_trash(paths)
-}
-
-#[tauri::command]
-pub fn compute_md5(path: String) -> Result<String, String> {
-    file_ops::compute_md5(&path)
-}
-
-#[tauri::command]
-pub fn sanitize_filename(name: String) -> String {
-    file_ops::sanitize_filename(&name)
-}
-
-#[tauri::command]
-pub fn format_file_size(size: u64) -> String {
-    file_ops::format_file_size(size)
-}
-
-#[tauri::command]
-pub fn read_exif(path: String) -> Result<ExifInfo, String> {
-    metadata::read_exif(&path)
-}
-
-#[tauri::command]
-pub fn reverse_geocode(lat: f64, lng: f64) -> Result<GpsLocation, String> {
-    metadata::reverse_geocode(lat, lng)
-}
-
-#[tauri::command]
-pub fn init_geocoder(data: String) -> Result<(), String> {
-    metadata::init_geocode_data(&data)
-}
-
-#[tauri::command]
 pub fn is_geocoder_ready() -> bool {
     crate::geocode::is_geocoder_ready()
 }
 
+/// 根据经纬度离线查询最近地名（省/市/区/地点）
 #[tauri::command]
-pub fn get_file_category(format: String) -> String {
-    metadata::get_file_category(&format)
-}
-
-#[tauri::command]
-pub fn is_image_file(path: String) -> bool {
-    metadata::is_image_file(&path)
-}
-
-#[tauri::command]
-pub fn is_video_file(path: String) -> bool {
-    metadata::is_video_file(&path)
-}
-
-#[tauri::command]
-pub fn get_file_detail(path: String) -> Result<FileDetailInfo, String> {
-    use std::path::Path;
-
-    let path_obj = Path::new(&path);
-    if !path_obj.exists() {
-        return Err(format!("文件不存在: {}", path));
-    }
-
-    let metadata = std::fs::metadata(&path).map_err(|e| format!("获取元数据失败: {}", e))?;
-
-    let name = path_obj
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_else(|| "unknown".to_string());
-    let format = path_obj
-        .extension()
-        .map(|e| e.to_string_lossy().to_lowercase())
-        .unwrap_or_else(|| "unknown".to_string());
-
-    let modified = metadata.modified().ok().map(file_ops::system_time_to_string).unwrap_or_else(|| "unknown".to_string());
-    let created = metadata.created().ok().map(file_ops::system_time_to_string).unwrap_or_else(|| "unknown".to_string());
-
-    let basic = FileDetail {
-        name,
-        path: path.clone(),
-        format: format.clone(),
-        size: metadata.len(),
-        modified,
-        created,
-        is_dir: metadata.is_dir(),
-    };
-
-    let exif = if metadata::is_image_file(&path) {
-        metadata::read_exif(&path).ok()
-    } else {
-        None
-    };
-
-    let gps = exif.as_ref().and_then(|e| {
-        if let (Some(lat), Some(lng)) = (e.gps_latitude, e.gps_longitude) {
-            metadata::reverse_geocode(lat, lng).ok()
-        } else {
-            None
-        }
-    });
-
-    Ok(FileDetailInfo {
-        basic,
-        exif,
-        gps,
-        ai_tags: vec![],
-    })
+pub fn query_location(latitude: f64, longitude: f64) -> Result<GpsLocation, String> {
+    crate::geocode::reverse_geocode(latitude, longitude)
 }
 
 #[tauri::command]
@@ -178,19 +64,6 @@ pub fn query_logs(
 }
 
 #[tauri::command]
-pub fn get_log_stats(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
-    state.log_manager.get_log_stats()
-}
-
-#[tauri::command]
-pub fn clean_expired_logs(
-    state: State<'_, AppState>,
-    retention_days: u32,
-) -> Result<usize, String> {
-    state.log_manager.clean_expired(retention_days)
-}
-
-#[tauri::command]
 pub fn clear_all_logs(
     state: State<'_, AppState>,
 ) -> Result<usize, String> {
@@ -206,28 +79,20 @@ pub fn delete_log(
 }
 
 #[tauri::command]
-pub fn get_app_info() -> serde_json::Value {
-    serde_json::json!({
-        "name": "轻羽归档",
-        "version": "1.0.0",
-        "description": "开源免费跨平台文件整理工具",
-        "tech_stack": ["Tauri", "Rust", "Vue3", "TypeScript", "Element Plus"],
-        "license": "MIT",
-        "url": "https://github.com/YangShengzhou03/LeafTidy"
-    })
+pub fn get_app_settings(state: State<'_, AppState>) -> AppSettings {
+    AppSettings {
+        log_retention_days: state.log_manager.get_retention_days(),
+        log_dir: state.log_manager.log_dir().to_string_lossy().to_string(),
+    }
 }
 
 #[tauri::command]
-pub fn organize_files(
-    source_dirs: Vec<String>,
-    target_dir: String,
-    rule: OrganizeRule,
-) -> Result<Vec<OrganizeResult>, String> {
-    file_ops::organize_files(&source_dirs, &target_dir, &rule)
+pub fn set_log_retention(state: State<'_, AppState>, days: u32) -> Result<(), String> {
+    state.log_manager.set_retention_days(days)
 }
 
 #[tauri::command]
-pub async fn organize_files_async(
+pub fn organize_files_async(
     app: tauri::AppHandle,
     source_dirs: Vec<String>,
     target_dir: String,
@@ -264,8 +129,74 @@ pub fn cancel_operation() -> CancelResult {
 }
 
 #[tauri::command]
-pub fn is_operation_cancelled() -> bool {
-    cancel::is_cancelled()
+pub async fn fix_date_taken_async(
+    app: tauri::AppHandle,
+    paths: Vec<String>,
+    target_dir: String,
+    date_source: String,
+    specified_time: Option<String>,
+) -> Result<Vec<ImageProcessResult>, String> {
+    use tauri::Emitter;
+
+    cancel::reset();
+
+    let result = metadata::fix_date_taken_batch(&paths, &target_dir, &date_source, specified_time.as_deref(), |progress: &TaskProgress| {
+        let _ = app.emit("image-process-progress", progress);
+    });
+
+    if cancel::is_cancelled() {
+        cancel::reset();
+        return Err("用户已取消操作".to_string());
+    }
+
+    result
+}
+
+#[tauri::command]
+pub async fn strip_exif_async(
+    app: tauri::AppHandle,
+    paths: Vec<String>,
+    target_dir: String,
+    options: metadata::StripOptions,
+) -> Result<Vec<ImageProcessResult>, String> {
+    use tauri::Emitter;
+
+    cancel::reset();
+
+    let result = metadata::strip_metadata_batch(&paths, &target_dir, options, |progress: &TaskProgress| {
+        let _ = app.emit("image-process-progress", progress);
+    });
+
+    if cancel::is_cancelled() {
+        cancel::reset();
+        return Err("用户已取消操作".to_string());
+    }
+
+    result
+}
+
+#[tauri::command]
+pub async fn write_gps_async(
+    app: tauri::AppHandle,
+    paths: Vec<String>,
+    target_dir: String,
+    latitude: f64,
+    longitude: f64,
+) -> Result<Vec<ImageProcessResult>, String> {
+    use tauri::Emitter;
+
+    cancel::reset();
+
+    let result = metadata::write_gps_batch(&paths, &target_dir, latitude, longitude, |progress: &TaskProgress| {
+        let _ = app.emit("image-process-progress", progress);
+    });
+
+    if cancel::is_cancelled() {
+        cancel::reset();
+        return Err("用户已取消操作".to_string());
+    }
+
+    result
 }
 
 #[tauri::command]
@@ -306,15 +237,6 @@ pub fn open_in_explorer(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn batch_rename(
-    paths: Vec<String>,
-    target_dir: String,
-    rule: RenameRule,
-) -> Result<Vec<RenameResult>, String> {
-    file_ops::batch_rename(&paths, &target_dir, &rule)
-}
-
-#[tauri::command]
 pub async fn batch_rename_async(
     app: tauri::AppHandle,
     paths: Vec<String>,
@@ -349,14 +271,6 @@ pub async fn batch_rename_async(
     });
 
     result
-}
-
-#[tauri::command]
-pub fn find_duplicates(
-    paths: Vec<String>,
-    detect_mode: String,
-) -> Result<DuplicateScanResult, String> {
-    file_ops::find_duplicates(&paths, &detect_mode)
 }
 
 #[tauri::command]
@@ -411,14 +325,6 @@ pub fn move_files_batch(
 }
 
 #[tauri::command]
-pub fn scan_auxiliary_files(
-    paths: Vec<String>,
-    cleanup_types: Vec<String>,
-) -> Result<Vec<CleanupResult>, String> {
-    file_ops::scan_auxiliary_files(&paths, &cleanup_types)
-}
-
-#[tauri::command]
 pub async fn scan_auxiliary_files_async(
     app: tauri::AppHandle,
     paths: Vec<String>,
@@ -442,13 +348,6 @@ pub async fn scan_auxiliary_files_async(
     }
 
     result
-}
-
-#[tauri::command]
-pub fn cleanup_auxiliary_files(
-    files: Vec<String>,
-) -> Result<BatchOperationResult, String> {
-    file_ops::cleanup_auxiliary_files(files)
 }
 
 #[tauri::command]

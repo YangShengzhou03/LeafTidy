@@ -5,7 +5,6 @@ const LAYOUT_STORAGE_KEY = 'leaf-tidy-layout'
 const WORK_DIRS_KEY = 'leaf-tidy-work-dirs'
 const OUTPUT_DIR_KEY = 'leaf-tidy-output-dir'
 const PAGE_STATE_KEY = 'leaf-tidy-page-state'
-const SETTINGS_KEY = 'leaf-tidy-settings'
 const DEFAULT_LEFT_BAR_RATIO = 0.15
 const DEFAULT_RIGHT_BAR_RATIO = 0.14
 const MIN_LEFT_WIDTH = 200
@@ -33,7 +32,7 @@ function loadLayout(): LayoutState {
         ...parsed,
       }
     }
-  } catch { }
+  } catch { /* localStorage 不可用时忽略 */ }
   const windowWidth = window.innerWidth
   return {
     showLeftBar: true,
@@ -44,43 +43,43 @@ function loadLayout(): LayoutState {
 }
 
 function saveLayout(state: LayoutState) {
-  try { localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(state)) } catch { }
+  try { localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(state)) } catch { /* localStorage 不可用时忽略 */ }
 }
 
 function loadWorkDirs(): WorkDirectory[] {
   try {
     const saved = localStorage.getItem(WORK_DIRS_KEY)
     if (saved) return JSON.parse(saved)
-  } catch { }
+  } catch { /* localStorage 不可用时忽略 */ }
   return []
 }
 
 function saveWorkDirs(dirs: WorkDirectory[]) {
-  try { localStorage.setItem(WORK_DIRS_KEY, JSON.stringify(dirs)) } catch { }
+  try { localStorage.setItem(WORK_DIRS_KEY, JSON.stringify(dirs)) } catch { /* localStorage 不可用时忽略 */ }
 }
 
 function loadOutputDir(): string {
   try {
     const saved = localStorage.getItem(OUTPUT_DIR_KEY)
     if (saved) return saved
-  } catch { }
+  } catch { /* localStorage 不可用时忽略 */ }
   return ''
 }
 
 function saveOutputDir(path: string) {
-  try { localStorage.setItem(OUTPUT_DIR_KEY, path) } catch { }
+  try { localStorage.setItem(OUTPUT_DIR_KEY, path) } catch { /* localStorage 不可用时忽略 */ }
 }
 
 function loadPageState(): Record<string, PageState> {
   try {
     const saved = localStorage.getItem(PAGE_STATE_KEY)
     if (saved) return JSON.parse(saved)
-  } catch { }
+  } catch { /* localStorage 不可用时忽略 */ }
   return {}
 }
 
 function savePageState(state: Record<string, PageState>) {
-  try { localStorage.setItem(PAGE_STATE_KEY, JSON.stringify(state)) } catch { }
+  try { localStorage.setItem(PAGE_STATE_KEY, JSON.stringify(state)) } catch { /* localStorage 不可用时忽略 */ }
 }
 
 

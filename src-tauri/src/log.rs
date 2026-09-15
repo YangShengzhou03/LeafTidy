@@ -112,31 +112,6 @@ impl LogManager {
         Ok(all_entries)
     }
 
-    pub fn get_log_stats(&self) -> Result<serde_json::Value, String> {
-        let all_logs = self.query_logs(None, None, None, 10000)?;
-
-        let total = all_logs.len();
-        let mut type_count: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
-        let mut success_count = 0;
-        let mut fail_count = 0;
-
-        for log in &all_logs {
-            *type_count.entry(log.operation_type.clone()).or_insert(0) += 1;
-            if log.status == "success" {
-                success_count += 1;
-            } else {
-                fail_count += 1;
-            }
-        }
-
-        Ok(serde_json::json!({
-            "total": total,
-            "success_count": success_count,
-            "fail_count": fail_count,
-            "by_type": type_count,
-        }))
-    }
-
     pub fn clean_expired(&self, retention_days: u32) -> Result<usize, String> {
         let cutoff = chrono::Local::now() - chrono::Duration::days(retention_days as i64);
         let cutoff_str = cutoff.format("%Y%m%d").to_string();
@@ -164,6 +139,34 @@ impl LogManager {
         }
 
         Ok(deleted)
+    }
+
+    fn settings_file(&self) -> PathBuf {
+        self.log_dir.join("settings.json")
+    }
+
+    /// 读取日志保留天数（未配置时默认 30 天）
+    pub fn get_retention_days(&self) -> u32 {
+        fs::read_to_string(self.settings_file())
+            .ok()
+            .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+            .and_then(|v| v.get("log_retention_days").and_then(|d| d.as_u64()))
+            .map(|d| d as u32)
+            .unwrap_or(30)
+    }
+
+    /// 保存日志保留天数并立即清理过期日志
+    pub fn set_retention_days(&self, days: u32) -> Result<(), String> {
+        // 目录可能在运行中被外部删除（如临时目录被清理工具移除），写入前确保存在
+        fs::create_dir_all(&self.log_dir).map_err(|e| format!("创建日志目录失败: {}", e))?;
+        let json = serde_json::json!({ "log_retention_days": days }).to_string();
+        fs::write(self.settings_file(), json).map_err(|e| format!("写入设置失败: {}", e))?;
+        self.clean_expired(days)?;
+        Ok(())
+    }
+
+    pub fn log_dir(&self) -> &PathBuf {
+        &self.log_dir
     }
 
     pub fn clear_all(&self) -> Result<usize, String> {

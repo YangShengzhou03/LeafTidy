@@ -1,13 +1,13 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2>重复文件清理</h2>
-      <p class="desc">识别并清理重复文件，释放宝贵的磁盘空间</p>
+      <h2>{{ t('dup.title') }}</h2>
+      <p class="desc">{{ t('dup.desc') }}</p>
     </div>
     <div class="page-content">
       <div class="config-panel">
         <div class="config-item">
-          <label>检测方式</label>
+          <label>{{ t('dup.detectMode') }}</label>
           <div class="option-grid">
             <div v-for="opt in detectOptions" :key="opt.value" class="option-chip"
               :class="{ active: detectMode === opt.value }" @click="detectMode = opt.value">
@@ -20,7 +20,7 @@
           </div>
         </div>
         <div class="config-item">
-          <label>处理方式</label>
+          <label>{{ t('dup.handleMode') }}</label>
           <div class="option-grid">
             <div v-for="opt in handleOptions" :key="opt.value" class="option-chip"
               :class="{ active: handleMode === opt.value, danger: opt.danger }" @click="handleMode = opt.value">
@@ -34,7 +34,7 @@
             <el-icon>
               <Warning />
             </el-icon>
-            <span>请先在首页设置输出目录</span>
+            <span>{{ t('dup.setOutDirFirst') }}</span>
           </div>
         </div>
       </div>
@@ -42,42 +42,40 @@
       <!-- 扫描进度 -->
       <div class="progress-panel" v-if="scanning">
         <div class="progress-header">
-          <span class="progress-title">正在扫描重复文件</span>
+          <span class="progress-title">{{ t('dup.scanning') }}</span>
           <span class="progress-percent">{{ scanProgress.percentage.toFixed(1) }}%</span>
         </div>
         <el-progress :percentage="scanProgress.percentage" :stroke-width="12" :show-text="false" class="progress-bar" />
         <div class="progress-stats">
-          <span>总数: {{ scanProgress.total }}</span>
-          <span>已扫描: {{ scanProgress.processed }}</span>
+          <span>{{ t('dup.total') }} {{ scanProgress.total }}</span>
+          <span>{{ t('dup.scanned') }} {{ scanProgress.processed }}</span>
         </div>
         <div class="progress-current" v-if="scanProgress.current_item">
-          <span class="current-label">当前:</span>
+          <span class="current-label">{{ t('dup.current') }}</span>
           <span class="current-file">{{ scanProgress.current_item }}</span>
         </div>
       </div>
 
       <div class="action-bar">
         <el-button v-if="!scanning" type="primary" :disabled="workDirs.length === 0" @click="startScan">
-          开始检测
+          {{ t('dup.startScan') }}
         </el-button>
         <el-button v-else type="danger" @click="stopScan">
-          终止检测
+          {{ t('dup.stopScan') }}
         </el-button>
         <el-button v-if="scanResult && scanResult.duplicate_groups.length > 0 && !scanning"
           @click="selectAllDuplicates">
-          全选重复项
+          {{ t('dup.selectAll') }}
         </el-button>
         <el-button v-if="selectedFiles.length > 0 && !scanning" @click="selectedFiles = []">
-          取消选择
+          {{ t('dup.clearSelection') }}
         </el-button>
       </div>
       <div class="result-panel" v-if="scanResult">
         <div class="result-header">
-          <span class="result-title">检测结果</span>
+          <span class="result-title">{{ t('dup.resultTitle') }}</span>
           <span class="result-stats">
-            共扫描 <strong>{{ scanResult.total_files }}</strong> 个文件，
-            发现 <strong>{{ scanResult.total_duplicates }}</strong> 个重复，
-            浪费空间 <strong>{{ formatSize(scanResult.wasted_space) }}</strong>
+            {{ t('dup.statScanned') }}<strong>{{ scanResult.total_files }}</strong>{{ t('dup.statFound') }}<strong>{{ scanResult.total_duplicates }}</strong>{{ t('dup.statWasted') }}<strong>{{ formatSize(scanResult.wasted_space) }}</strong>
           </span>
         </div>
         <div class="duplicate-groups" v-if="scanResult.duplicate_groups.length > 0">
@@ -86,14 +84,14 @@
               <div class="group-info">
                 <span class="group-md5" :title="group.md5">MD5: {{ group.md5.slice(0, 16) }}</span>
                 <span class="group-size">{{ formatSize(group.size) }}</span>
-                <span class="group-count">{{ group.files.length }} 个文件</span>
+                <span class="group-count">{{ t('dup.fileCount', { n: group.files.length }) }}</span>
               </div>
               <div class="group-actions">
                 <el-button size="small" type="primary" plain @click="selectGroupDuplicates(group)">
-                  选择重复
+                  {{ t('dup.selectDup') }}
                 </el-button>
                 <el-button size="small" type="danger" @click="confirmCleanGroup(group)">
-                  清理重复
+                  {{ t('dup.cleanDup') }}
                 </el-button>
               </div>
             </div>
@@ -108,7 +106,7 @@
                 </el-icon>
                 <span class="file-name clickable" @click="openFile(file.path)" :title="file.path">{{ file.name }}</span>
                 <span class="file-modified">{{ file.modified }}</span>
-                <span class="file-tag original-tag" v-if="file.is_original">保留</span>
+                <span class="file-tag original-tag" v-if="file.is_original">{{ t('dup.keep') }}</span>
                 <el-checkbox v-else v-model="selectedFiles" :value="file.path" />
               </div>
             </div>
@@ -118,12 +116,12 @@
           <el-icon class="empty-icon">
             <CircleCheck />
           </el-icon>
-          <span>没有发现重复文件</span>
+          <span>{{ t('dup.noDuplicates') }}</span>
         </div>
         <div class="batch-action" v-if="selectedFiles.length > 0">
-          <span class="selected-info">已选择 {{ selectedFiles.length }} 个文件</span>
+          <span class="selected-info">{{ t('dup.selectedCount', { n: selectedFiles.length }) }}</span>
           <el-button type="danger" @click="confirmCleanSelected">
-            清理选中的文件
+            {{ t('dup.cleanSelected') }}
           </el-button>
         </div>
       </div>
@@ -132,11 +130,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, type Ref, onMounted, onUnmounted } from 'vue'
-import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
+import { ref, computed, inject, type Ref, onMounted, onUnmounted } from 'vue'
+import { ElMessageBox, ElNotification } from 'element-plus'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { Search, ScaleToOriginal, Check, Delete, FolderOpened, Close, Document, Star, CircleCheck, Warning } from '@element-plus/icons-vue'
+import { t } from '@/i18n'
 import { useFileOps } from '@/composables/useFileOps'
 import { useLog, type FileResult } from '@/composables/useLog'
 import type { WorkDirectory, DuplicateScanResult, DuplicateGroup, BatchOperationResult, TaskProgress, CancelResult } from '@/types'
@@ -161,17 +160,17 @@ const scanProgress = ref<TaskProgress>({
 
 let unlistenProgress: UnlistenFn | null = null
 
-const detectOptions = [
-  { value: 'md5', label: 'MD5校验', desc: '精确匹配', icon: Search },
-  { value: 'size', label: '文件大小', desc: '快速检测', icon: ScaleToOriginal },
-  { value: 'both', label: '双重校验', desc: '最准确', icon: Check },
-]
+const detectOptions = computed(() => [
+  { value: 'md5', label: t('dup.optMd5'), desc: t('dup.optMd5Desc'), icon: Search },
+  { value: 'size', label: t('dup.optSize'), desc: t('dup.optSizeDesc'), icon: ScaleToOriginal },
+  { value: 'both', label: t('dup.optBoth'), desc: t('dup.optBothDesc'), icon: Check },
+])
 
-const handleOptions = [
-  { value: 'trash', label: '移至回收站', icon: Delete },
-  { value: 'move', label: '移动到目录', icon: FolderOpened },
-  { value: 'delete', label: '彻底删除', icon: Close, danger: true },
-]
+const handleOptions = computed(() => [
+  { value: 'trash', label: t('dup.optTrash'), icon: Delete },
+  { value: 'move', label: t('dup.optMove'), icon: FolderOpened },
+  { value: 'delete', label: t('dup.optDelete'), icon: Close, danger: true },
+])
 
 onMounted(async () => {
   unlistenProgress = await listen<TaskProgress>('duplicate-progress', (event) => {
@@ -188,15 +187,15 @@ onUnmounted(() => {
 async function stopScan() {
   try {
     await invoke<CancelResult>('cancel_operation')
-    ElNotification({ type: 'info', title: '提示', message: '正在终止扫描...' })
+    ElNotification({ type: 'info', title: t('dup.tip'), message: t('dup.stopping') })
   } catch (e: any) {
-    ElNotification({ type: 'error', title: '错误', message: `终止失败: ${e}` })
+    ElNotification({ type: 'error', title: t('dup.error'), message: t('dup.stopFailed', { e }) })
   }
 }
 
 async function startScan() {
   if (workDirs.value.length === 0) {
-    ElNotification({ type: 'warning', title: '警告', message: '请先选择待处理目录' })
+    ElNotification({ type: 'warning', title: t('dup.warning'), message: t('dup.selectDirFirst') })
     return
   }
 
@@ -219,18 +218,18 @@ async function startScan() {
     scanResult.value = res
 
     if (res.duplicate_groups.length === 0) {
-      ElNotification({ type: 'success', title: '成功', message: '没有发现重复文件' })
+      ElNotification({ type: 'success', title: t('dup.success'), message: t('dup.noDuplicates') })
     } else {
-      ElNotification({ type: 'success', title: '成功', message: `发现 ${res.total_duplicates} 个重复文件，浪费空间 ${formatSize(res.wasted_space)}` })
+      ElNotification({ type: 'success', title: t('dup.success'), message: t('dup.foundResult', { n: res.total_duplicates, size: formatSize(res.wasted_space) }) })
     }
   } catch (e: any) {
     const errMsg = String(e)
     if (errMsg.includes('取消')) {
       const pathsStr = workDirs.value.map(d => d.path).join(', ')
       await logCancelledOperation('duplicate_clean', pathsStr, '扫描重复文件 - 用户终止')
-      ElNotification({ type: 'info', title: '提示', message: '扫描已取消' })
+      ElNotification({ type: 'info', title: t('dup.tip'), message: t('dup.scanCancelled') })
     } else {
-      ElNotification({ type: 'error', title: '错误', message: `检测失败: ${errMsg}` })
+      ElNotification({ type: 'error', title: t('dup.error'), message: t('dup.detectFailed', { e: errMsg }) })
     }
   } finally {
     scanning.value = false
@@ -262,44 +261,46 @@ async function confirmCleanGroup(group: DuplicateGroup) {
   const duplicates = group.files.filter(f => !f.is_original)
   if (duplicates.length === 0) return
 
-  const actionText = handleMode.value === 'trash' ? '移至回收站' :
-    handleMode.value === 'delete' ? '彻底删除' : '移动'
+  const actionText = handleMode.value === 'trash' ? t('dup.optTrash') :
+    handleMode.value === 'delete' ? t('dup.optDelete') : t('dup.actionMove')
   const totalSize = formatSize(group.size * duplicates.length)
 
   try {
     await ElMessageBox.confirm(
-      `确定要${actionText} ${duplicates.length} 个重复文件吗？共 ${totalSize}`,
-      '确认清理',
+      t('dup.confirmGroup', { action: actionText, n: duplicates.length, size: totalSize }),
+      t('dup.confirmTitle'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('dup.ok'),
+        cancelButtonText: t('dup.cancel'),
         type: 'warning',
       }
     )
     await cleanDuplicates(duplicates.map(f => f.path))
   } catch {
+    // 用户取消确认框
   }
 }
 
 async function confirmCleanSelected() {
   if (selectedFiles.value.length === 0) return
 
-  const actionText = handleMode.value === 'trash' ? '移至回收站' :
-    handleMode.value === 'delete' ? '彻底删除' : '移动'
+  const actionText = handleMode.value === 'trash' ? t('dup.optTrash') :
+    handleMode.value === 'delete' ? t('dup.optDelete') : t('dup.actionMove')
 
   try {
     await ElMessageBox.confirm(
-      `确定要${actionText}选中的 ${selectedFiles.value.length} 个文件吗？`,
-      '确认清理',
+      t('dup.confirmSelected', { action: actionText, n: selectedFiles.value.length }),
+      t('dup.confirmTitle'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('dup.ok'),
+        cancelButtonText: t('dup.cancel'),
         type: 'warning',
       }
     )
     await cleanDuplicates(selectedFiles.value)
     selectedFiles.value = []
   } catch {
+    // 用户取消确认框
   }
 }
 
@@ -308,7 +309,7 @@ async function cleanDuplicates(paths: string[]) {
 
   if (handleMode.value === 'move') {
     if (!outputDir.value) {
-      ElNotification({ type: 'warning', title: '警告', message: '请先在首页设置输出目录' })
+      ElNotification({ type: 'warning', title: t('dup.warning'), message: t('dup.setOutDirFirst') })
       return
     }
     try {
@@ -324,19 +325,19 @@ async function cleanDuplicates(paths: string[]) {
       }))
       await logDuplicateCleanResults(results)
       if (res.success_count > 0) {
-        ElNotification({ type: 'success', title: '成功', message: `已移动 ${res.success_count} 个文件` })
+        ElNotification({ type: 'success', title: t('dup.success'), message: t('dup.movedCount', { n: res.success_count }) })
         await startScan()
       }
       if (res.fail_count > 0) {
-        ElNotification({ type: 'warning', title: '警告', message: `${res.fail_count} 个文件移动失败` })
+        ElNotification({ type: 'warning', title: t('dup.warning'), message: t('dup.moveFailCount', { n: res.fail_count }) })
       }
     } catch (e: any) {
       const errMsg = String(e)
       if (errMsg.includes('取消')) {
         await logCancelledOperation('duplicate_clean', paths.join(', '), '移动重复文件 - 用户终止')
-        ElNotification({ type: 'info', title: '提示', message: '移动操作已取消' })
+        ElNotification({ type: 'info', title: t('dup.tip'), message: t('dup.moveCancelled') })
       } else {
-        ElNotification({ type: 'error', title: '错误', message: `移动失败: ${errMsg}` })
+        ElNotification({ type: 'error', title: t('dup.error'), message: t('dup.moveFailed', { e: errMsg }) })
       }
     }
   } else {
@@ -353,19 +354,19 @@ async function cleanDuplicates(paths: string[]) {
       }))
       await logDuplicateCleanResults(results)
       if (res.success_count > 0) {
-        ElNotification({ type: 'success', title: '成功', message: `已清理 ${res.success_count} 个文件` })
+        ElNotification({ type: 'success', title: t('dup.success'), message: t('dup.cleanedCount', { n: res.success_count }) })
         await startScan()
       }
       if (res.fail_count > 0) {
-        ElNotification({ type: 'warning', title: '警告', message: `${res.fail_count} 个文件清理失败` })
+        ElNotification({ type: 'warning', title: t('dup.warning'), message: t('dup.cleanFailCount', { n: res.fail_count }) })
       }
     } catch (e: any) {
       const errMsg = String(e)
       if (errMsg.includes('取消')) {
         await logCancelledOperation('duplicate_clean', paths.join(', '), '清理重复文件 - 用户终止')
-        ElNotification({ type: 'info', title: '提示', message: '清理操作已取消' })
+        ElNotification({ type: 'info', title: t('dup.tip'), message: t('dup.cleanCancelled') })
       } else {
-        ElNotification({ type: 'error', title: '错误', message: `清理失败: ${errMsg}` })
+        ElNotification({ type: 'error', title: t('dup.error'), message: t('dup.cleanFailed', { e: errMsg }) })
       }
     }
   }
@@ -375,7 +376,7 @@ async function cleanDuplicates(paths: string[]) {
 <style scoped>
 .page-container {
   height: 100%;
-  background: #18191C;
+  background: var(--bg);
   padding: 24px;
   overflow-y: auto;
 }
@@ -387,17 +388,17 @@ async function cleanDuplicates(paths: string[]) {
 .page-header h2 {
   font-size: 16px;
   font-weight: 500;
-  color: #E0E6ED;
+  color: var(--text);
   margin-bottom: 6px;
 }
 
 .page-header .desc {
   font-size: 13px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .config-panel {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
@@ -414,7 +415,7 @@ async function cleanDuplicates(paths: string[]) {
 .config-item label {
   display: block;
   font-size: 13px;
-  color: #C8D0DC;
+  color: var(--text-secondary);
   margin-bottom: 12px;
   font-weight: 500;
 }
@@ -430,65 +431,65 @@ async function cleanDuplicates(paths: string[]) {
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 6px;
-  border: 1px solid #3A3B40;
+  border: 1px solid var(--border);
   cursor: pointer;
   transition: all 0.15s;
   user-select: none;
 }
 
 .option-chip:hover {
-  background: #353639;
+  background: var(--panel-2-hover);
 }
 
 .option-chip.active {
-  background: rgba(58, 134, 255, 0.15);
-  border-color: #3A86FF;
+  background: rgba(var(--primary-rgb), 0.15);
+  border-color: var(--primary);
 }
 
 .option-chip .el-icon {
   font-size: 16px;
-  color: #C8D0DC;
+  color: var(--text-secondary);
 }
 
 .option-chip.active .el-icon {
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 .option-name {
   font-size: 13px;
-  color: #C8D0DC;
+  color: var(--text-secondary);
 }
 
 .option-chip.active .option-name {
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 .option-desc {
   font-size: 11px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 /* 危险选项样式 */
 .option-chip.danger:hover {
-  background: rgba(232, 17, 35, 0.15);
-  border-color: rgba(232, 17, 35, 0.3);
+  background: rgba(var(--danger-rgb), 0.15);
+  border-color: rgba(var(--danger-rgb), 0.3);
 }
 
 .option-chip.danger:hover .el-icon,
 .option-chip.danger:hover .option-name {
-  color: #E81123;
+  color: var(--danger);
 }
 
 .option-chip.danger.active {
-  background: rgba(232, 17, 35, 0.15);
-  border-color: #E81123;
+  background: rgba(var(--danger-rgb), 0.15);
+  border-color: var(--danger);
 }
 
 .option-chip.danger.active .el-icon,
 .option-chip.danger.active .option-name {
-  color: #E81123;
+  color: var(--danger);
 }
 
 .move-dir-warning {
@@ -497,9 +498,9 @@ async function cleanDuplicates(paths: string[]) {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: rgba(232, 17, 35, 0.15);
+  background: rgba(var(--danger-rgb), 0.15);
   border-radius: 6px;
-  color: #E81123;
+  color: var(--danger);
   font-size: 13px;
 }
 
@@ -508,7 +509,7 @@ async function cleanDuplicates(paths: string[]) {
 }
 
 .progress-panel {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
@@ -524,13 +525,13 @@ async function cleanDuplicates(paths: string[]) {
 .progress-title {
   font-size: 14px;
   font-weight: 500;
-  color: #E0E6ED;
+  color: var(--text);
 }
 
 .progress-percent {
   font-size: 16px;
   font-weight: 600;
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 .progress-bar {
@@ -541,7 +542,7 @@ async function cleanDuplicates(paths: string[]) {
   display: flex;
   gap: 16px;
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .progress-current {
@@ -550,19 +551,19 @@ async function cleanDuplicates(paths: string[]) {
   gap: 8px;
   margin-top: 12px;
   padding: 8px 12px;
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 6px;
 }
 
 .current-label {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
 .current-file {
   font-size: 12px;
-  color: #E0E6ED;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -577,7 +578,7 @@ async function cleanDuplicates(paths: string[]) {
 
 /* 结果面板 */
 .result-panel {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   padding: 20px;
 }
@@ -588,22 +589,22 @@ async function cleanDuplicates(paths: string[]) {
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #2A2B30;
+  border-bottom: 1px solid var(--panel-2);
 }
 
 .result-title {
   font-size: 14px;
   font-weight: 500;
-  color: #E0E6ED;
+  color: var(--text);
 }
 
 .result-stats {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .result-stats strong {
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 /* 重复文件组 */
@@ -614,7 +615,7 @@ async function cleanDuplicates(paths: string[]) {
 }
 
 .group-item {
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -624,8 +625,8 @@ async function cleanDuplicates(paths: string[]) {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #353639;
-  border-bottom: 1px solid #3A3B40;
+  background: var(--panel-2-hover);
+  border-bottom: 1px solid var(--border);
 }
 
 .group-info {
@@ -637,18 +638,18 @@ async function cleanDuplicates(paths: string[]) {
 .group-md5 {
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .group-size {
   font-size: 12px;
-  color: #3A86FF;
+  color: var(--primary);
   font-weight: 500;
 }
 
 .group-count {
   font-size: 12px;
-  color: #C8D0DC;
+  color: var(--text-secondary);
 }
 
 .group-actions {
@@ -669,26 +670,26 @@ async function cleanDuplicates(paths: string[]) {
 }
 
 .file-item:hover {
-  background: rgba(58, 134, 255, 0.05);
+  background: rgba(var(--primary-rgb), 0.05);
 }
 
 .file-item.original {
-  background: rgba(58, 134, 255, 0.1);
+  background: rgba(var(--primary-rgb), 0.1);
 }
 
 .file-item .el-icon {
   font-size: 16px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .file-item.original .el-icon {
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 .file-name {
   flex: 1;
   font-size: 13px;
-  color: #C8D0DC;
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -699,12 +700,12 @@ async function cleanDuplicates(paths: string[]) {
 }
 
 .file-name.clickable:hover {
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 .file-modified {
   font-size: 11px;
-  color: #8A94A6;
+  color: var(--text-muted);
   min-width: 140px;
 }
 
@@ -712,17 +713,17 @@ async function cleanDuplicates(paths: string[]) {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 4px;
-  background: #3A3B40;
-  color: #8A94A6;
+  background: var(--border);
+  color: var(--text-muted);
 }
 
 .file-tag.original-tag {
-  background: rgba(58, 134, 255, 0.2);
-  color: #3A86FF;
+  background: rgba(var(--primary-rgb), 0.2);
+  color: var(--primary);
 }
 
 .original-icon {
-  color: #3A86FF !important;
+  color: var(--primary) !important;
 }
 
 /* 空结果 */
@@ -732,13 +733,13 @@ async function cleanDuplicates(paths: string[]) {
   align-items: center;
   justify-content: center;
   padding: 40px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .empty-icon {
   font-size: 48px;
   margin-bottom: 12px;
-  color: #3A86FF;
+  color: var(--primary);
 }
 
 /* 批量操作 */
@@ -748,11 +749,11 @@ async function cleanDuplicates(paths: string[]) {
   align-items: center;
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid #2A2B30;
+  border-top: 1px solid var(--panel-2);
 }
 
 .selected-info {
   font-size: 13px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 </style>

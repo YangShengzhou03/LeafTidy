@@ -4,32 +4,32 @@
       <el-icon :size="32">
         <InfoFilled />
       </el-icon>
-      <p>请选择待处理目录</p>
+      <p>{{ t('sidebar.right.selectDir') }}</p>
     </div>
     <div v-else class="detail-content">
       <div class="stats-section">
         <div class="stats-row">
-          <span class="stats-label">文件总数</span>
+          <span class="stats-label">{{ t('sidebar.right.totalFiles') }}</span>
           <span class="stats-value">{{ dirStats.total_files }}</span>
         </div>
         <div class="stats-row">
-          <span class="stats-label">目录总数</span>
+          <span class="stats-label">{{ t('sidebar.right.totalDirs') }}</span>
           <span class="stats-value">{{ dirStats.total_dirs }}</span>
         </div>
         <div class="stats-row">
-          <span class="stats-label">总大小</span>
+          <span class="stats-label">{{ t('sidebar.right.totalSize') }}</span>
           <span class="stats-value">{{ formatSize(dirStats.total_size) }}</span>
         </div>
         <div class="stats-row">
-          <span class="stats-label">最旧文件</span>
-          <span class="stats-value">{{ dirStats.oldest_file || '无' }}</span>
+          <span class="stats-label">{{ t('sidebar.right.oldestFile') }}</span>
+          <span class="stats-value">{{ dirStats.oldest_file || t('sidebar.right.none') }}</span>
         </div>
         <div class="stats-row">
-          <span class="stats-label">最新文件</span>
-          <span class="stats-value">{{ dirStats.newest_file || '无' }}</span>
+          <span class="stats-label">{{ t('sidebar.right.newestFile') }}</span>
+          <span class="stats-value">{{ dirStats.newest_file || t('sidebar.right.none') }}</span>
         </div>
         <div v-if="Object.keys(dirStats.file_types).length > 0" class="file-types">
-          <div class="section-subtitle">文件类型分布</div>
+          <div class="section-subtitle">{{ t('sidebar.right.fileTypeDist') }}</div>
           <div ref="chartContainer" class="chart-container"></div>
         </div>
       </div>
@@ -39,6 +39,7 @@
 
 <script setup lang="ts">
 import { inject, watch, ref, onMounted, onUnmounted, nextTick, type Ref } from 'vue'
+import { t } from '@/i18n'
 import { InfoFilled } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import type { DirectoryStats, LayoutState } from '@/types'
@@ -70,7 +71,7 @@ function initChart() {
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
-      formatter: '{b}: {c} 个 ({d}%)',
+      formatter: t('sidebar.right.chartTooltip'),
     },
     legend: {
       orient: 'horizontal',
@@ -166,7 +167,7 @@ watch(
 <style scoped>
 .right-sidebar {
   height: 100%;
-  background: #1F2023;
+  background: var(--panel);
   overflow-y: auto;
   padding: 16px;
 }
@@ -177,7 +178,7 @@ watch(
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #8A94A6;
+  color: var(--text-muted);
   gap: 8px;
 }
 
@@ -196,7 +197,7 @@ watch(
   flex-direction: column;
   gap: 4px;
   padding: 8px;
-  background: #2A2B30;
+  background: var(--panel-2);
   border-radius: 6px;
 }
 
@@ -206,7 +207,7 @@ watch(
     justify-content: space-between;
     align-items: center;
     background: transparent;
-    border-bottom: 1px solid #2A2B30;
+    border-bottom: 1px solid var(--panel-2);
     border-radius: 0;
   }
 }
@@ -214,12 +215,12 @@ watch(
 .stats-label {
   flex-shrink: 0;
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .stats-value {
   font-size: 12px;
-  color: #E0E6ED;
+  color: var(--text);
   font-weight: 500;
   text-align: right;
   overflow: hidden;
@@ -231,7 +232,7 @@ watch(
 .file-types {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #2A2B30;
+  border-top: 1px solid var(--panel-2);
 }
 
 .chart-container {
@@ -242,7 +243,7 @@ watch(
 
 .section-subtitle {
   font-size: 12px;
-  color: #8A94A6;
+  color: var(--text-muted);
   font-weight: 500;
   margin-bottom: 8px;
 }

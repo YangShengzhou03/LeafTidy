@@ -2,35 +2,35 @@
   <div class="page-container">
     <div class="page-content" v-if="logDetail">
       <div class="detail-card">
-        <div class="card-header">基本信息</div>
+        <div class="card-header">{{ t('logs.detail.basic') }}</div>
         <div class="card-body">
           <div class="info-row">
-            <span class="info-label">执行时间</span>
+            <span class="info-label">{{ t('logs.detail.time') }}</span>
             <span class="info-value">{{ logDetail.timestamp }}</span>
           </div>
           <div class="info-row">
-            <span class="info-label">操作类型</span>
+            <span class="info-label">{{ t('logs.detail.opType') }}</span>
             <span class="info-value">{{ getOperationTypeLabel(logDetail.operation_type) }}</span>
           </div>
           <div class="info-row">
-            <span class="info-label">执行状态</span>
+            <span class="info-label">{{ t('logs.detail.status') }}</span>
             <span class="info-value">
               <span :class="['status-tag', logDetail.status]">{{ getStatusLabel(logDetail.status) }}</span>
             </span>
           </div>
           <div class="info-row">
-            <span class="info-label">处理路径</span>
+            <span class="info-label">{{ t('logs.col.sourcePath') }}</span>
             <span class="info-value path-value">{{ logDetail.source_path }}</span>
           </div>
           <div class="info-row" v-if="logDetail.target_path">
-            <span class="info-label">目标路径</span>
+            <span class="info-label">{{ t('logs.col.targetPath') }}</span>
             <span class="info-value path-value">{{ logDetail.target_path }}</span>
           </div>
         </div>
       </div>
 
       <div class="detail-card" v-if="logDetail.detail">
-        <div class="card-header">详细操作记录</div>
+        <div class="card-header">{{ t('logs.detail.records') }}</div>
         <div class="card-body">
           <div class="log-reader">
             <pre class="log-content">{{ logDetail.detail }}</pre>
@@ -42,7 +42,7 @@
       <el-icon :size="48">
         <Warning />
       </el-icon>
-      <p>未找到日志详情</p>
+      <p>{{ t('logs.detail.notFound') }}</p>
     </div>
   </div>
 </template>
@@ -50,31 +50,34 @@
 <script setup lang="ts">
 import { ref, inject, onMounted, type Ref } from 'vue'
 import { Warning } from '@element-plus/icons-vue'
+import { t } from '@/i18n'
 import type { LogEntry } from '@/types'
 
 const currentLogId = inject<Ref<string>>('currentLogId')!
 const logDetail = ref<LogEntry | null>(null)
 
 function getOperationTypeLabel(type: string): string {
-  const labels: Record<string, string> = {
-    organize: '文件整理',
-    rename: '批量重命名',
-    duplicate_clean: '重复清理',
-    cleanup: '附属清理',
-    move: '移动',
-    copy: '复制',
-    delete: '删除',
+  const keys: Record<string, string> = {
+    organize: 'logs.op.organize',
+    rename: 'logs.op.rename',
+    duplicate_clean: 'logs.op.duplicate_clean',
+    cleanup: 'logs.op.cleanup',
+    move: 'logs.op.move',
+    copy: 'logs.op.copy',
+    delete: 'logs.op.delete',
   }
-  return labels[type] || type
+  const key = keys[type]
+  return key ? t(key) : type
 }
 
 function getStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    success: '成功',
-    fail: '失败',
-    cancelled: '已取消',
+  const keys: Record<string, string> = {
+    success: 'logs.status.success',
+    fail: 'logs.status.fail',
+    cancelled: 'logs.status.cancelled',
   }
-  return labels[status] || status
+  const key = keys[status]
+  return key ? t(key) : status
 }
 
 onMounted(async () => {
@@ -89,7 +92,7 @@ onMounted(async () => {
       })
       logDetail.value = logs.find(log => log.id === currentLogId.value) || null
     } catch (e) {
-      console.error('获取日志详情失败:', e)
+      console.error('Failed to load log details:', e)
       logDetail.value = null
     }
   }
@@ -99,7 +102,7 @@ onMounted(async () => {
 <style scoped>
 .page-container {
   height: 100%;
-  background: #18191C;
+  background: var(--bg);
   padding: 24px;
   overflow-y: auto;
 }
@@ -111,7 +114,7 @@ onMounted(async () => {
 }
 
 .detail-card {
-  background: #1F2023;
+  background: var(--panel);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -120,9 +123,9 @@ onMounted(async () => {
   padding: 16px 20px;
   font-size: 14px;
   font-weight: 500;
-  color: #E0E6ED;
-  background: #2A2B30;
-  border-bottom: 1px solid #3A3B40;
+  color: var(--text);
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
 }
 
 .card-body {
@@ -142,14 +145,14 @@ onMounted(async () => {
 
 .info-label {
   font-size: 13px;
-  color: #8A94A6;
+  color: var(--text-muted);
   min-width: 80px;
   flex-shrink: 0;
 }
 
 .info-value {
   font-size: 13px;
-  color: #E0E6ED;
+  color: var(--text);
   word-break: break-all;
 }
 
@@ -167,24 +170,24 @@ onMounted(async () => {
 }
 
 .status-tag.success {
-  background: rgba(82, 196, 26, 0.15);
-  color: #52C41A;
+  background: rgba(var(--success-rgb), 0.15);
+  color: var(--success);
 }
 
 .status-tag.fail {
-  background: rgba(232, 17, 35, 0.15);
-  color: #E81123;
+  background: rgba(var(--danger-rgb), 0.15);
+  color: var(--danger);
 }
 
 .status-tag.cancelled {
-  background: rgba(250, 173, 20, 0.15);
-  color: #FAAD14;
+  background: rgba(var(--warning-rgb), 0.15);
+  color: var(--warning);
 }
 
 .log-reader {
-  background: #18191C;
+  background: var(--bg);
   border-radius: 6px;
-  border: 1px solid #3A3B40;
+  border: 1px solid var(--border);
   max-height: 600px;
   overflow: hidden;
 }
@@ -192,7 +195,7 @@ onMounted(async () => {
 .log-content {
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 12px;
-  color: #E0E6ED;
+  color: var(--text);
   padding: 16px;
   margin: 0;
   white-space: pre-wrap;
@@ -209,7 +212,7 @@ onMounted(async () => {
   justify-content: center;
   gap: 16px;
   height: calc(100% - 80px);
-  color: #8A94A6;
+  color: var(--text-muted);
 }
 
 .empty-state p {

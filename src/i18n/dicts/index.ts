@@ -1,0 +1,15 @@
+import app from './app'
+import home from './home'
+import settings from './settings'
+import organize from './organize'
+import rename from './rename'
+import duplicates from './duplicates'
+import cleanup from './cleanup'
+import photos from './photos'
+import logs from './logs'
+import legal from './legal'
+import legal2 from './legal2'
+import about from './about'
+import type { Dict } from '../types'
+
+export const fragments: Dict[] = [app, home, settings, organize, rename, duplicates, cleanup, photos, logs, legal, legal2, about]
