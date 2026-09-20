@@ -1,0 +1,74 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "轻羽归档",
+  "version": "1.0.0",
+  "identifier": "com.leaftidy.desktop",
+  "build": {
+    "beforeDevCommand": "npm run server",
+    "devUrl": "http://localhost:8080",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "轻羽归档",
+        "label": "main",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "maxWidth": 99999,
+        "maxHeight": 99999,
+        "resizable": true,
+        "decorations": false,
+        "transparent": false,
+        "visible": true,
+        "focus": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/icon.ico"
+    ],
+    "resources": [
+      "geodata/*"
+    ],
+    "publisher": "Yangshengzhou",
+    "copyright": "Copyright © 2026 Yangshengzhou All Rights Reserved.",
+    "category": "Utility",
+    "shortDescription": "轻羽归档 - 轻量级文件管理工具",
+    "longDescription": "轻羽归档是一款轻量级文件管理和归档工具，提供高效的文件组织、搜索和备份功能。",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "wix": {
+        "language": "zh-CN"
+      },
+      "nsis": {
+        "languages": [
+          "SimpChinese"
+        ],
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico"
+      }
+    }
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    }
+  }
+}
