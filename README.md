@@ -2,13 +2,15 @@
 
 **纯离线 · 永久免费的跨平台文件整理工具**
 
-[![Stars](https://img.shields.io/github/stars/YangShengzhou03/LeafTidy?style=flat-square&color=f59e0b)](https://github.com/YangShengzhou03/LeafTidy/stargazers) [![License](https://img.shields.io/github/license/YangShengzhou03/LeafTidy?style=flat-square&color=blue)](https://github.com/YangShengzhou03/LeafTidy/blob/main/LICENSE) [![Release](https://img.shields.io/github/v/release/YangShengzhou03/LeafTidy?style=flat-square&color=success)](https://github.com/YangShengzhou03/LeafTidy/releases) [![Tauri](https://img.shields.io/badge/Tauri-2.x-FFC131?style=flat-square&logo=tauri&logoColor=000)](https://github.com/tauri-apps/tauri) [![Vue 3](https://img.shields.io/badge/Vue-3-4FC08D?style=flat-square&logo=vue.js&logoColor=white)](https://vuejs.org) ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-eeeeee?style=flat-square) ![Offline](https://img.shields.io/badge/Offline-100%25-00b894?style=flat-square) ![MIT](https://img.shields.io/badge/License-MIT-00C853?style=flat-square)
+[![Stars](https://img.shields.io/github/stars/YangShengzhou03/LeafTidy?style=for-the-badge&color=f59e0b)](https://github.com/YangShengzhou03/LeafTidy/stargazers) [![License](https://img.shields.io/github/license/YangShengzhou03/LeafTidy?style=for-the-badge&color=blue)](https://github.com/YangShengzhou03/LeafTidy/blob/main/LICENSE) [![Release](https://img.shields.io/github/v/release/YangShengzhou03/LeafTidy?style=for-the-badge&color=success)](https://github.com/YangShengzhou03/LeafTidy/releases) [![Tauri](https://img.shields.io/badge/Tauri-2.x-FFC131?style=for-the-badge&logo=tauri&logoColor=000)](https://github.com/tauri-apps/tauri) [![Vue 3](https://img.shields.io/badge/Vue-3-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white)](https://vuejs.org) ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-eeeeee?style=for-the-badge) ![Offline](https://img.shields.io/badge/Offline-100%25-00b894?style=for-the-badge)
 
 <a href="https://get.microsoft.com/installer/download/9pfntg4l910r?referrer=appbadge" target="_self">
   <img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/>
 </a>
 
 > 基于 Tauri 2 构建的本地文件整理工具，所有运算在本机完成，无需联网。支持智能归档、批量重命名、内容级去重、EXIF 隐私清除、照片 GPS 写入、拍摄时间修复、系统垃圾清理，所有操作支持一键撤回。
+
+![轻羽海报](https://gitee.com/Yangshengzhou/yang-shengzhou/raw/master/LeafTidy/assets/LeafTidy-poster-cn.png)
 
 ---
 
@@ -116,10 +118,6 @@ Windows、macOS 系统运行中会持续生成各类隐藏冗余文件，手动�
 ## 下载
 
 推荐通过微软应用商店安装，自动更新且无需额外操作：
-
-<a href="https://get.microsoft.com/installer/download/9pfntg4l910r?referrer=appbadge" target="_self">
-  <img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/>
-</a>
 
 其他渠道：[GitHub Release](https://github.com/YangShengzhou03/LeafTidy/releases)（Windows / macOS / Linux）、[联想应用商店](https://lestore.lenovo.com/detail)、[蓝奏云](https://cca4666.lanzoul.com/b037bh2o1c)（提取密码：c9d7）、[123云盘](https://www.123865.com/s/wgLiVv-hj7v3)。
 
