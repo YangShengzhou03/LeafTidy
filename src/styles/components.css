@@ -1,0 +1,561 @@
+/* ===== 共享组件样式（全站复用）===== */
+
+/* ---- 页面容器 ---- */
+.page-container {
+  height: 100%;
+  background: var(--bg);
+  padding: 24px;
+  overflow-y: auto;
+}
+
+/* ---- 页面头部 ---- */
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h2 {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.page-header .desc {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.page-content {
+  /* 页面内容区域 */
+}
+
+/* ---- 配置面板 ---- */
+.config-panel {
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.config-item {
+  margin-bottom: 20px;
+}
+
+.config-item:last-child {
+  margin-bottom: 0;
+}
+
+.config-item label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.config-item .hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: 12px;
+}
+
+.config-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.config-row .config-item {
+  margin-bottom: 0;
+}
+
+/* ---- 标签选择器 ---- */
+.tag-selector {
+  background: var(--panel-2);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.tag-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.tag-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.tag-chip:hover {
+  background: var(--panel-2-hover);
+}
+
+.tag-chip .el-icon {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.tag-chip span {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* ---- 路径/模板构建器 ---- */
+.path-builder,
+.template-builder {
+  background: var(--panel-2);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.path-segments,
+.template-segments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.path-segment,
+.template-part {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--primary);
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.15s;
+}
+
+.path-segment:hover,
+.template-part:hover {
+  opacity: 0.8;
+}
+
+.segment-order {
+  font-size: 11px;
+  color: rgba(var(--white-rgb), 0.7);
+  background: rgba(var(--white-rgb), 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.segment-name,
+.part-tag {
+  font-size: 13px;
+  color: var(--white);
+}
+
+.segment-remove,
+.part-remove {
+  font-size: 14px;
+  color: rgba(var(--white-rgb), 0.7);
+}
+
+.path-preview,
+.template-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--panel);
+  border-radius: 6px;
+  border: 1px dashed var(--border);
+}
+
+.path-preview .el-icon,
+.template-preview .el-icon {
+  font-size: 16px;
+  color: var(--text-muted);
+}
+
+.preview-text {
+  font-size: 13px;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+/* ---- 分隔符选择 ---- */
+.separator-grid {
+  display: flex;
+  gap: 10px;
+}
+
+.sep-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  background: var(--panel);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sep-chip:hover {
+  background: var(--panel-2-hover);
+}
+
+.sep-chip span {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* ---- 操作栏 ---- */
+.action-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+/* ---- 进度面板 ---- */
+.progress-panel {
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.progress-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.progress-percent {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.progress-bar {
+  margin-bottom: 12px;
+}
+
+.progress-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.progress-current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: var(--panel-2);
+  border-radius: 6px;
+}
+
+.current-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.current-file {
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- 结果面板 ---- */
+.result-panel {
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.result-section {
+  margin-bottom: 16px;
+}
+
+.result-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.section-label .el-icon {
+  font-size: 14px;
+}
+
+.fail-label {
+  background: rgba(var(--danger-rgb), 0.15);
+  color: var(--danger);
+}
+
+.success-label {
+  background: rgba(var(--success-rgb), 0.15);
+  color: var(--success);
+}
+
+.result-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.result-stats {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.result-stats.scanning-stats {
+  color: var(--accent, #409eff);
+  font-weight: 500;
+}
+
+.live-results .image-grid {
+  opacity: 0.9;
+}
+
+.result-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* ---- 文件名过长统一截断（全项目生效） ---- */
+.result-name,
+.result-target,
+.file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- 结果项 ---- */
+.result-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--panel-2);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.result-item .source {
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-item .target {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.result-item .el-icon {
+  font-size: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.result-item.success .el-icon {
+  color: var(--success);
+}
+
+.result-item.error .el-icon {
+  color: var(--danger);
+}
+
+/* ---- 空状态 ---- */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+.empty-state .el-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.empty-state p {
+  font-size: 13px;
+}
+
+/* ---- 设置项 ---- */
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.setting-label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.setting-label .hint {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ---- 页面标题（关于/协议页面） ---- */
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  margin: 20px 0 12px;
+}
+
+.section-content {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.section-content p {
+  margin-bottom: 12px;
+}
+
+.section-content strong {
+  color: var(--text);
+}
+
+/* ---- 日志页面 ---- */
+.log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.log-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: var(--panel);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.log-item:hover {
+  background: var(--panel-2);
+}
+
+.log-item .log-date {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.log-item .log-content {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-item .log-size {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ---- 分隔线 ---- */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 20px 0;
+}
+
+/* ---- 链接 ---- */
+.link {
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* ---- 文本辅助 ---- */
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+.text-warning {
+  color: var(--warning);
+}

@@ -1,0 +1,230 @@
+<template>
+  <div class="right-sidebar">
+    <div v-if="!dirStats" class="empty-state">
+      <el-icon :size="32">
+        <InfoFilled />
+      </el-icon>
+      <p>{{ t('sidebar.right.selectDir') }}</p>
+    </div>
+    <div v-else class="detail-content">
+      <div class="stats-section">
+        <div class="stats-row">
+          <span class="stats-label">{{ t('sidebar.right.totalFiles') }}</span>
+          <span class="stats-value">{{ dirStats.total_files }}</span>
+        </div>
+        <div class="stats-row">
+          <span class="stats-label">{{ t('sidebar.right.totalDirs') }}</span>
+          <span class="stats-value">{{ dirStats.total_dirs }}</span>
+        </div>
+        <div class="stats-row">
+          <span class="stats-label">{{ t('sidebar.right.totalSize') }}</span>
+          <span class="stats-value">{{ formatSize(dirStats.total_size) }}</span>
+        </div>
+        <div class="stats-row">
+          <span class="stats-label">{{ t('sidebar.right.oldestFile') }}</span>
+          <span class="stats-value">{{ dirStats.oldest_file || t('sidebar.right.none') }}</span>
+        </div>
+        <div class="stats-row">
+          <span class="stats-label">{{ t('sidebar.right.newestFile') }}</span>
+          <span class="stats-value">{{ dirStats.newest_file || t('sidebar.right.none') }}</span>
+        </div>
+        <div v-if="Object.keys(dirStats.file_types).length > 0" class="file-types">
+          <div class="section-subtitle">{{ t('sidebar.right.fileTypeDist') }}</div>
+          <div ref="chartContainer" class="chart-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { inject, watch, ref, onMounted, onUnmounted, nextTick, type Ref } from 'vue'
+import { t } from '@/i18n'
+import { InfoFilled } from '@element-plus/icons-vue'
+import * as echarts from 'echarts/core'
+import { PieChart } from 'echarts/charts'
+import { TooltipComponent, LegendComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+import type { DirectoryStats, LayoutState } from '@/types'
+import { useFileOps } from '@/composables/useFileOps'
+
+echarts.use([PieChart, TooltipComponent, LegendComponent, CanvasRenderer])
+
+const dirStats = inject<Ref<DirectoryStats | null>>('dirStats')!
+const layout = inject<Ref<LayoutState>>('layout')!
+const chartContainer = ref<HTMLElement | null>(null)
+let chartInstance: echarts.ECharts | null = null
+
+const { formatSize } = useFileOps()
+
+const CHART_COLORS = ['#3A86FF', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16']
+
+function isDarkTheme() {
+  return document.documentElement.dataset.theme === 'dark'
+}
+
+function buildChartOption() {
+  if (!dirStats.value) return null
+  const fileTypes = dirStats.value.file_types
+  const data = Object.entries(fileTypes).map(([type, count]) => ({
+    name: type.toUpperCase(),
+    value: count,
+  }))
+  const dark = isDarkTheme()
+  return {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      formatter: t('sidebar.right.chartTooltip'),
+    },
+    legend: {
+      orient: 'horizontal',
+      bottom: 0,
+      left: 'center',
+      textStyle: { color: dark ? '#C8D0DC' : '#64748B', fontSize: 11 },
+      itemWidth: 12,
+      itemHeight: 12,
+      itemGap: 12,
+    },
+    series: [
+      {
+        type: 'pie',
+        radius: ['40%', '70%'],
+        center: ['50%', '40%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 4,
+          borderColor: dark ? '#1F2023' : '#FFFFFF',
+          borderWidth: 2,
+        },
+        label: { show: false },
+        emphasis: {
+          label: { show: true, fontSize: 12, fontWeight: 'bold', color: dark ? '#E0E6ED' : '#1E293B' },
+        },
+        labelLine: { show: false },
+        data,
+      },
+    ],
+    color: CHART_COLORS,
+  }
+}
+
+function initChart() {
+  if (!chartContainer.value || !dirStats.value) return
+  if (!chartInstance) {
+    chartInstance = echarts.init(chartContainer.value)
+  }
+  const option = buildChartOption()
+  if (option) chartInstance.setOption(option, true)
+}
+
+onMounted(() => {
+  if (dirStats.value && Object.keys(dirStats.value.file_types).length > 0) {
+    nextTick(() => initChart())
+  }
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  chartInstance?.dispose()
+  chartInstance = null
+})
+
+function handleResize() {
+  chartInstance?.resize()
+}
+
+watch(() => dirStats.value, (newStats) => {
+  if (newStats && Object.keys(newStats.file_types).length > 0) {
+    nextTick(() => initChart())
+  }
+}, { deep: true })
+
+watch(() => layout.value.rightBarWidth, () => nextTick(() => handleResize()))
+</script>
+
+<style scoped>
+.right-sidebar {
+  height: 100%;
+  background: var(--panel);
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  gap: 8px;
+}
+
+.empty-state p {
+  font-size: 13px;
+}
+
+.stats-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.stats-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: var(--panel-2);
+  border-radius: 6px;
+}
+
+@media (min-width: 768px) {
+  .stats-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    background: transparent;
+    border-bottom: 1px solid var(--panel-2);
+    border-radius: 0;
+  }
+}
+
+.stats-label {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.stats-value {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 500;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+
+.file-types {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--panel-2);
+}
+
+.chart-container {
+  width: 100%;
+  height: 200px;
+  margin-top: 8px;
+}
+
+.section-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+</style>
