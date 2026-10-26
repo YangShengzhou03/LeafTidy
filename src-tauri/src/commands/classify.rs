@@ -1,0 +1,91 @@
+use crate::models::{ClassifyProgress, ClassifyResult, ClassifyRule, ModelDefinition};
+use crate::tasks::{event, scope};
+
+use super::{acquire_classify_lock, run_batch_task, ClassifyLockGuard};
+
+#[tauri::command]
+pub fn list_builtin_models() -> Vec<ModelDefinition> {
+    crate::classify::list_builtin_models()
+}
+
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command]
+pub async fn classify_images_async(
+    app: tauri::AppHandle,
+    model_source: String,
+    is_builtin: bool,
+    image_paths: Vec<String>,
+    rule: ClassifyRule,
+    output_dir: String,
+) -> Result<Vec<ClassifyResult>, String> {
+    use tauri::Emitter;
+
+    // 输出目录是必填项：空字符串会被拼成根路径，导致图片被复制到系统盘根目录
+    let output_dir = output_dir.trim().to_string();
+    if output_dir.is_empty() {
+        return Err("输出目录不能为空".to_string());
+    }
+    if !std::path::Path::new(&output_dir).is_absolute() {
+        return Err(format!("输出目录必须是绝对路径: {output_dir}"));
+    }
+    if !is_builtin && !std::path::Path::new(&model_source).is_file() {
+        return Err(format!("模型文件不存在: {model_source}"));
+    }
+
+    // 并发锁：ONNX Runtime 不支持并发会话
+    if !acquire_classify_lock() {
+        log::warn!("[AI分类] 拒绝启动：已有分类任务在运行");
+        return Err("已有分类任务在运行，请等待完成或取消后重试".to_string());
+    }
+
+    // 确保锁在任务结束时释放（即使 panic 也会通过 Drop 释放）
+    let _lock_guard = ClassifyLockGuard;
+
+    let total = image_paths.len();
+    log::info!("[AI分类] 启动: {total} 张图片 -> {output_dir}, 模型: {model_source} (内置: {is_builtin})");
+
+    let progress_app = app.clone();
+
+    let result = run_batch_task(scope::CLASSIFY, move |token| {
+        crate::classify::classify_images_batch(
+            &model_source,
+            is_builtin,
+            &image_paths,
+            &rule,
+            &output_dir,
+            |_log_msg: &str| {},
+            |progress: &ClassifyProgress| {
+                let _ = progress_app.emit(event::CLASSIFY_PROGRESS, progress);
+            },
+            token,
+        )
+    })
+    .await;
+
+    if result.is_ok() {
+        let _ = app.emit(event::CLASSIFY_PROGRESS, &ClassifyProgress {
+            total: total as u64,
+            processed: total as u64,
+            current_item: None,
+            percentage: 100.0,
+            current_category: None,
+            result: None,
+        });
+    }
+
+    match &result {
+        Ok(results) => {
+            let success = results.iter().filter(|r| r.error.is_none()).count();
+            log::info!("[AI分类] 完成: 成功 {success} 张, 失败 {} 张", results.len() - success);
+        }
+        Err(e) => log::error!("[AI分类] 失败: {e}"),
+    }
+
+    result
+}
+
+#[tauri::command]
+pub fn validate_model_path(model_path: &str) -> bool {
+    log::debug!("验证模型路径: {model_path}");
+    crate::classify::validate_model(model_path)
+}

@@ -1,0 +1,93 @@
+use crate::models::{BatchOperationResult, LowQualityScanResult, TaskProgress};
+use crate::tasks::{event, scope};
+
+use super::run_batch_task;
+
+#[tauri::command]
+#[allow(clippy::cast_possible_truncation)]
+pub async fn scan_low_quality_images_async(
+    app: tauri::AppHandle,
+    paths: Vec<String>,
+    detect_types: Vec<String>,
+    variance_threshold: f64,
+    min_dimension: u64,
+) -> Result<LowQualityScanResult, String> {
+    use tauri::Emitter;
+
+    log::info!(
+        "扫描低质图片: {} 个目录, 检测类型: {:?}, 模糊阈值: {}, 最小尺寸: {}",
+        paths.len(),
+        detect_types,
+        variance_threshold,
+        min_dimension
+    );
+
+    let task_app = app.clone();
+    let result = run_batch_task(scope::CLEANUP, move |token| {
+        crate::cleanup::scan_low_quality_images_with_progress(
+            token,
+            &paths,
+            &detect_types,
+            variance_threshold,
+            min_dimension as u32,
+            |progress| {
+                let _ = app.emit(event::CLEANUP_SCAN_PROGRESS, progress);
+            },
+            |img| {
+                let _ = task_app.emit(event::CLEANUP_SCAN_RESULT, img);
+            },
+        )
+    })
+    .await;
+
+    match &result {
+        Ok(scan_result) => {
+            log::info!(
+                "扫描低质图片完成: {} 张图片中发现 {} 张低质",
+                scan_result.total_scanned,
+                scan_result.images.len()
+            );
+        }
+        Err(e) => log::error!("扫描低质图片失败: {e}"),
+    }
+
+    result
+}
+
+#[tauri::command]
+pub async fn delete_low_quality_images_async(
+    app: tauri::AppHandle,
+    files: Vec<String>,
+) -> Result<BatchOperationResult, String> {
+    use tauri::Emitter;
+
+    log::info!("删除低质图片: {} 个文件", files.len());
+    // 信任边界校验：删除是不可逆操作，只接受绝对路径且拒绝目录
+    crate::fs_util::ensure_absolute_non_dirs(&files)?;
+    let start = std::time::Instant::now();
+
+    let total = files.len() as u64;
+    let file_count = files.len();
+    let task_app = app.clone();
+    let result = run_batch_task(scope::CLEANUP, move |token| {
+        crate::cleanup::delete_low_quality_images_with_progress(token, &files, |progress| {
+            let _ = task_app.emit(event::CLEANUP_DELETE_PROGRESS, progress);
+        })
+    })
+    .await;
+
+    if let Ok(ref result) = result {
+        log::info!("删除低质图片完成: {}/{} 文件成功, 耗时 {:?}", result.success_count, file_count, start.elapsed());
+        let _ = app.emit(
+            event::CLEANUP_DELETE_PROGRESS,
+            &TaskProgress {
+                total,
+                processed: (result.success_count + result.fail_count) as u64,
+                current_item: None,
+                percentage: 100.0,
+            },
+        );
+    }
+
+    result
+}
