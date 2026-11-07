@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>轻羽归档</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    #app { width: 100%; height: 100%; }
+  </style>
+  <script>
+    /* TEMP-TEST-SHIM: 纯浏览器下 mock Tauri internals，使 Vue 应用可渲染；测试后移除 */
+    window.__TAURI_INTERNALS__ = {
+      metadata: { currentWindow: { label: 'main' }, currentWebview: { label: 'main' } },
+      invoke: function (cmd) { if (cmd && cmd.indexOf('list_') === 0) { return Promise.resolve([]); } return Promise.resolve(null); },
+      transformCallback: function () { return 0; },
+      unregisterCallback: function () {},
+      convertFileSrc: function (p) { return p; }
+    };
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+</body>
+</html>
